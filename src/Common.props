@@ -1,7 +1,7 @@
 <Project>
     <!-- Common project settings -->
     <PropertyGroup>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
     </PropertyGroup>
 
     <!-- Common package properties -->
