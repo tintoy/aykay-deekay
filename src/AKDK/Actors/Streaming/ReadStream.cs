@@ -4,22 +4,30 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace AKDK.Actors
+namespace AKDK.Actors.Streaming
 {
+	/// <summary>
+	///		Actor that reads data from a stream.
+	/// </summary>
+	/// <remarks>
+	///		This actor is only necessary until Akka.Streams for netstandard includes support for sourcing data from streams.
+	/// </remarks>
     public sealed class ReadStream
         : ReceiveActorEx
     {
-        public static readonly StreamData EndOfStream = new StreamData(ByteString.Empty, isEndOfStream: true);
+        public const int DefaultBufferSize = 1024;
 
-        readonly IActorRef  _owner;
+		readonly string		_name;
+		readonly IActorRef  _owner;
         readonly Stream     _stream;
         readonly int        _bufferSize;
         readonly byte[]     _buffer;
         readonly bool       _closeStream;
 
-        public ReadStream(IActorRef owner, Stream stream, int bufferSize = 1024, bool closeStream = true)
+        public ReadStream(string name, IActorRef owner, Stream stream, int bufferSize, bool closeStream)
         {
-            _owner = owner;
+			_name = name;
+			_owner = owner;
             _stream = stream;
             _bufferSize = bufferSize;
             _buffer = new byte[bufferSize];
@@ -29,7 +37,9 @@ namespace AKDK.Actors
             {
                 _owner.Tell(streamData);
 
-                if (!streamData.IsEndOfStream)
+                if (streamData.IsEndOfStream)
+					Context.Stop(Self);
+				else
                     ReadData().PipeTo(Self);
             });
             Receive<Failure>(readFailure =>
@@ -45,7 +55,10 @@ namespace AKDK.Actors
             ReadData().PipeTo(Self);
         }
 
-        protected override void PostStop()
+		StreamData EndOfStream => new StreamData(_name, ByteString.Empty, isEndOfStream: true);
+
+
+		protected override void PostStop()
         {
             if (_closeStream)
                 _stream.Dispose();
@@ -57,18 +70,31 @@ namespace AKDK.Actors
                 return EndOfStream;
 
             int bytesRead = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
+            if (bytesRead == 0)
+                return EndOfStream;
 
-            return new StreamData(
+            return new StreamData(_name,
                 ByteString.Create(_buffer, 0, bytesRead)
+            );
+        }
+
+        public static Props Create(string name, IActorRef owner, Stream stream, int bufferSize = DefaultBufferSize, bool closeStream = true)
+        {
+            return Props.Create(
+                () => new ReadStream(name, owner, stream, bufferSize, closeStream)
             );
         }
 
         public class StreamData
         {
-            public StreamData(ByteString data, bool isEndOfStream = false)
+            public StreamData(string name, ByteString data, bool isEndOfStream = false)
             {
-                Data = data;
+				Name = name;
+				Data = data;
+                IsEndOfStream = isEndOfStream;
             }
+
+			public string Name { get; }
 
             public ByteString Data { get; }
 
@@ -77,12 +103,15 @@ namespace AKDK.Actors
 
         public class StreamError
         {
-            public StreamError(Exception exception)
+            public StreamError(string name, Exception exception)
             {
+				Name = name;
                 Exception = exception;
             }
 
-            public Exception Exception { get; }
+			public string Name { get; }
+
+			public Exception Exception { get; }
         }
     }
 }

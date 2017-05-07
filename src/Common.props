@@ -14,5 +14,6 @@
     </PropertyGroup>
     
     <Import Project="../VersionInfo.props" />
-    <Import Project="../Signing.props" />
+    <!-- Strong-naming disabled until Akka Streams has a strong name -->
+    <!--<Import Project="../Signing.props" />-->
 </Project>
