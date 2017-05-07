@@ -39,6 +39,40 @@ namespace AKDK.Actors
         protected IScheduler Scheduler => Context.System.Scheduler;
 
         /// <summary>
+        ///     Register a handler for a singleton message.
+        /// </summary>
+        /// <param name="handler">
+        ///     The handler.
+        /// </param>
+        protected virtual void ReceiveSingleton<TMessage>(Action handler)
+        {
+            if (handler == null)
+                throw new ArgumentException(nameof(handler));
+
+            Receive<TMessage>(_ =>
+            {
+                handler();
+            });
+        }
+
+        /// <summary>
+        ///     Register a handler for a singleton message.
+        /// </summary>
+        /// <param name="handler">
+        ///     The handler (returns <c>true</c>, if the message was handled; otherwise, <c>false</c>).
+        /// </param>
+        protected virtual void ReceiveSingleton<TMessage>(Func<bool> handler)
+        {
+            if (handler == null)
+                throw new ArgumentException(nameof(handler));
+
+            Receive<TMessage>(_ =>
+            {
+                return handler();
+            });
+        }
+
+        /// <summary>
 		///		Create the log message formatter to be used by the actor.
 		/// </summary>
 		/// <returns>
