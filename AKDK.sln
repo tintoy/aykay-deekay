@@ -3,6 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.26403.7
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A1F96380-2DC6-47CD-856C-A38DE022B12C}"
+	ProjectSection(SolutionItems) = preProject
+		src\Common.props = src\Common.props
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AKDK", "src\AKDK\AKDK.csproj", "{23AED78A-9776-477E-93BD-86F6F228C194}"
 EndProject

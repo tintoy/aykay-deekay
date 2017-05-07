@@ -1,6 +1,7 @@
 <Project>
     <!-- Common project settings -->
     <PropertyGroup>
+		<!-- TODO: Enable once structure has stabilised enough to be worth documenting -->
         <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
     </PropertyGroup>
 
@@ -14,6 +15,4 @@
     </PropertyGroup>
     
     <Import Project="../VersionInfo.props" />
-    <!-- Strong-naming disabled until Akka Streams has a strong name -->
-    <!--<Import Project="../Signing.props" />-->
 </Project>
