@@ -11,14 +11,14 @@ namespace AKDK.Actors
         : ReceiveActor
     {
         /// <summary>
-		///		The logger for the actor (lazily-initialised).
-		/// </summary>
-		readonly Lazy<ILoggingAdapter> _log;
+        ///		The logger for the actor (lazily-initialised).
+        /// </summary>
+        readonly Lazy<ILoggingAdapter> _log;
 
         /// <summary>
-		///		Create a new <see cref="ReceiveActorEx"/>.
-		/// </summary>
-		protected ReceiveActorEx()
+        ///		Create a new <see cref="ReceiveActorEx"/>.
+        /// </summary>
+        protected ReceiveActorEx()
         {
             _log = new Lazy<ILoggingAdapter>(() =>
             {
@@ -29,9 +29,9 @@ namespace AKDK.Actors
         }
 
         /// <summary>
-		///		The logger for the actor.
-		/// </summary>
-		protected ILoggingAdapter Log => _log.Value;
+        ///		The logger for the actor.
+        /// </summary>
+        protected ILoggingAdapter Log => _log.Value;
 
         /// <summary>
         ///     The system scheduler.
@@ -73,12 +73,12 @@ namespace AKDK.Actors
         }
 
         /// <summary>
-		///		Create the log message formatter to be used by the actor.
-		/// </summary>
-		/// <returns>
-		///		The log message formatter.
-		/// </returns>
-		protected virtual ILogMessageFormatter CreateLogMessageFormatter()
+        ///		Create the log message formatter to be used by the actor.
+        /// </summary>
+        /// <returns>
+        ///		The log message formatter.
+        /// </returns>
+        protected virtual ILogMessageFormatter CreateLogMessageFormatter()
         {
             return new DefaultLogMessageFormatter();
         }

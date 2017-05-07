@@ -10,137 +10,137 @@ using System.Reflection;
 
 namespace AKDK.Actors
 {
-	using Messages;
+    using Messages;
 
     /// <summary>
     ///     Well-known messages for <see cref="EventBusActor{TEvent}"/>.
     /// </summary>
     public static class EventBusActor
     {
-		/// <summary>
-		///		Request subscription of an actor to one or more event types.
-		/// </summary>
+        /// <summary>
+        ///		Request subscription of an actor to one or more event types.
+        /// </summary>
         public class Subscribe
-			: CorrelatedMessage
+            : CorrelatedMessage
         {
-			/// <summary>
-			///		Create a new <see cref="Subscribe"/> message.
-			/// </summary>
-			/// <param name="subscriber">
-			///		The actor that will receive events.
-			/// </param>
-			/// <param name="eventTypes">
-			///		The types of events to subscribe to.
-			/// </param>
-			/// <param name="correlationId">
-			///		An optional message correlation Id.
-			/// </param>
-			public Subscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
-				: base(correlationId)
+            /// <summary>
+            ///		Create a new <see cref="Subscribe"/> message.
+            /// </summary>
+            /// <param name="subscriber">
+            ///		The actor that will receive events.
+            /// </param>
+            /// <param name="eventTypes">
+            ///		The types of events to subscribe to.
+            /// </param>
+            /// <param name="correlationId">
+            ///		An optional message correlation Id.
+            /// </param>
+            public Subscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
+                : base(correlationId)
             {
                 Subscriber = subscriber;
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-			/// <summary>
-			///		The actor that will receive events.
-			/// </summary>
-			public IActorRef Subscriber { get; }
+            /// <summary>
+            ///		The actor that will receive events.
+            /// </summary>
+            public IActorRef Subscriber { get; }
 
-			/// <summary>
-			///		The types of events to subscribe to.
-			/// </summary>
-			public ImmutableList<Type> EventTypes { get; }
+            /// <summary>
+            ///		The types of events to subscribe to.
+            /// </summary>
+            public ImmutableList<Type> EventTypes { get; }
         }
-		
-		/// <summary>
-		///		Notification that an actor has been subscribed to one or more event types.
-		/// </summary>
+
+        /// <summary>
+        ///		Notification that an actor has been subscribed to one or more event types.
+        /// </summary>
         public class Subscribed
-			: CorrelatedMessage
+            : CorrelatedMessage
         {
-			/// <summary>
-			///		Create a new <see cref="Subscribed"/> message.
-			/// </summary>
-			/// <param name="correlationId">
-			///		The message correlation Id used in the original <see cref="Subscribe"/> request.
-			/// </param>
-			/// <param name="eventTypes">
-			///		The event types that were subscribed to.
-			/// </param>
+            /// <summary>
+            ///		Create a new <see cref="Subscribed"/> message.
+            /// </summary>
+            /// <param name="correlationId">
+            ///		The message correlation Id used in the original <see cref="Subscribe"/> request.
+            /// </param>
+            /// <param name="eventTypes">
+            ///		The event types that were subscribed to.
+            /// </param>
             public Subscribed(string correlationId, IEnumerable<Type> eventTypes)
-				: base(correlationId)
+                : base(correlationId)
             {
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-			/// <summary>
-			///		The event types that were subscribed to.
-			/// </summary>
-			public ImmutableList<Type> EventTypes { get; }
+            /// <summary>
+            ///		The event types that were subscribed to.
+            /// </summary>
+            public ImmutableList<Type> EventTypes { get; }
         }
 
-		/// <summary>
-		///		Message requesting unsubscription of an actor from one or more event types.
-		/// </summary>
+        /// <summary>
+        ///		Message requesting unsubscription of an actor from one or more event types.
+        /// </summary>
         public class Unsubscribe
-			: CorrelatedMessage
+            : CorrelatedMessage
         {
-			/// <summary>
-			///		Create a new <see cref="Subscribe"/> message.
-			/// </summary>
-			/// <param name="subscriber">
-			///		The actor that will no longer receive events.
-			/// </param>
-			/// <param name="eventTypes">
-			///		The types of events to unsubscribe from.
-			/// </param>
-			/// <param name="correlationId">
-			///		An optional message correlation Id.
-			/// </param>
-			public Unsubscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
-				: base(correlationId)
-			{
+            /// <summary>
+            ///		Create a new <see cref="Subscribe"/> message.
+            /// </summary>
+            /// <param name="subscriber">
+            ///		The actor that will no longer receive events.
+            /// </param>
+            /// <param name="eventTypes">
+            ///		The types of events to unsubscribe from.
+            /// </param>
+            /// <param name="correlationId">
+            ///		An optional message correlation Id.
+            /// </param>
+            public Unsubscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
+                : base(correlationId)
+            {
                 Subscriber = subscriber;
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-			/// <summary>
-			///		The actor that will no longer receive events.
-			/// </summary>
-			public IActorRef Subscriber { get; }
+            /// <summary>
+            ///		The actor that will no longer receive events.
+            /// </summary>
+            public IActorRef Subscriber { get; }
 
-			/// <summary>
-			///		The types of events to unsubscribe from.
-			/// </summary>
-			public ImmutableList<Type> EventTypes { get; }
+            /// <summary>
+            ///		The types of events to unsubscribe from.
+            /// </summary>
+            public ImmutableList<Type> EventTypes { get; }
         }
 
-		/// <summary>
-		///		Notification that an actor has been unsubscribed from one or more event types.
-		/// </summary>
+        /// <summary>
+        ///		Notification that an actor has been unsubscribed from one or more event types.
+        /// </summary>
         public class Unsubscribed
-			: CorrelatedMessage
+            : CorrelatedMessage
         {
-			/// <summary>
-			///		Create a new <see cref="Unsubscribed"/> message.
-			/// </summary>
-			/// <param name="correlationId">
-			///		The message correlation Id used in the original <see cref="Unsubscribe"/> request.
-			/// </param>
-			/// <param name="eventTypes">
-			///		The event types that were unsubscribed from.
-			/// </param>
-			public Unsubscribed(string correlationId, IEnumerable<Type> eventTypes)
-				: base(correlationId)
-			{
+            /// <summary>
+            ///		Create a new <see cref="Unsubscribed"/> message.
+            /// </summary>
+            /// <param name="correlationId">
+            ///		The message correlation Id used in the original <see cref="Unsubscribe"/> request.
+            /// </param>
+            /// <param name="eventTypes">
+            ///		The event types that were unsubscribed from.
+            /// </param>
+            public Unsubscribed(string correlationId, IEnumerable<Type> eventTypes)
+                : base(correlationId)
+            {
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-			/// <summary>
-			///		The event types that were unsubscribed from.
-			/// </summary>
-			public ImmutableList<Type> EventTypes { get; }
+            /// <summary>
+            ///		The event types that were unsubscribed from.
+            /// </summary>
+            public ImmutableList<Type> EventTypes { get; }
         }
     }
 
@@ -185,7 +185,7 @@ namespace AKDK.Actors
                 );
             });
         }
-        
+
         /// <summary>
         ///     The underlying event bus.
         /// </summary>

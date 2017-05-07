@@ -40,7 +40,7 @@ namespace AKDK.Actors
                     // Not one of ours; this will result in DeathPactException.
                     Unhandled(terminated);
 
-                    return; 
+                    return;
                 }
 
                 Log.Info("Handling termination of actor '{0}' for end-point '{1}'.", terminated.ActorRef, endPointUri);

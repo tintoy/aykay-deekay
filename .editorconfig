@@ -1,3 +1,4 @@
 [*.cs]
-indent_style = tab
+indent_style = space
+indent_size = 4
 csharp_style_throw_expression = false:none

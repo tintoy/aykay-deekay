@@ -57,7 +57,7 @@ namespace AKDK.Tests
         MemoryStream CreateMemoryStream(int length)
         {
             byte[] buffer = new byte[length];
-            
+
             return new MemoryStream(buffer);
         }
     }
