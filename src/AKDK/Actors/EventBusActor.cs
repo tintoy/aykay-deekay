@@ -10,61 +10,137 @@ using System.Reflection;
 
 namespace AKDK.Actors
 {
+	using Messages;
+
     /// <summary>
     ///     Well-known messages for <see cref="EventBusActor{TEvent}"/>.
     /// </summary>
     public static class EventBusActor
     {
+		/// <summary>
+		///		Request subscription of an actor to one or more event types.
+		/// </summary>
         public class Subscribe
+			: CorrelatedMessage
         {
-            public Subscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
+			/// <summary>
+			///		Create a new <see cref="Subscribe"/> message.
+			/// </summary>
+			/// <param name="subscriber">
+			///		The actor that will receive events.
+			/// </param>
+			/// <param name="eventTypes">
+			///		The types of events to subscribe to.
+			/// </param>
+			/// <param name="correlationId">
+			///		An optional message correlation Id.
+			/// </param>
+			public Subscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
+				: base(correlationId)
             {
                 Subscriber = subscriber;
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
-                CorrelationId = correlationId;
             }
 
-            public IActorRef Subscriber { get; }
-            public ImmutableList<Type> EventTypes { get; }
-            public string CorrelationId { get; }
-        }
+			/// <summary>
+			///		The actor that will receive events.
+			/// </summary>
+			public IActorRef Subscriber { get; }
 
+			/// <summary>
+			///		The types of events to subscribe to.
+			/// </summary>
+			public ImmutableList<Type> EventTypes { get; }
+        }
+		
+		/// <summary>
+		///		Notification that an actor has been subscribed to one or more event types.
+		/// </summary>
         public class Subscribed
+			: CorrelatedMessage
         {
+			/// <summary>
+			///		Create a new <see cref="Subscribed"/> message.
+			/// </summary>
+			/// <param name="correlationId">
+			///		The message correlation Id used in the original <see cref="Subscribe"/> request.
+			/// </param>
+			/// <param name="eventTypes">
+			///		The event types that were subscribed to.
+			/// </param>
             public Subscribed(string correlationId, IEnumerable<Type> eventTypes)
+				: base(correlationId)
             {
-                CorrelationId = correlationId;
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-            public string CorrelationId { get; }
-            public ImmutableList<Type> EventTypes { get; }
+			/// <summary>
+			///		The event types that were subscribed to.
+			/// </summary>
+			public ImmutableList<Type> EventTypes { get; }
         }
 
+		/// <summary>
+		///		Message requesting unsubscription of an actor from one or more event types.
+		/// </summary>
         public class Unsubscribe
+			: CorrelatedMessage
         {
-            public Unsubscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
-            {
+			/// <summary>
+			///		Create a new <see cref="Subscribe"/> message.
+			/// </summary>
+			/// <param name="subscriber">
+			///		The actor that will no longer receive events.
+			/// </param>
+			/// <param name="eventTypes">
+			///		The types of events to unsubscribe from.
+			/// </param>
+			/// <param name="correlationId">
+			///		An optional message correlation Id.
+			/// </param>
+			public Unsubscribe(IActorRef subscriber, IEnumerable<Type> eventTypes = null, string correlationId = null)
+				: base(correlationId)
+			{
                 Subscriber = subscriber;
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
-                CorrelationId = correlationId;
             }
 
-            public IActorRef Subscriber { get; }
-            public ImmutableList<Type> EventTypes { get; }
-            public string CorrelationId { get; }
+			/// <summary>
+			///		The actor that will no longer receive events.
+			/// </summary>
+			public IActorRef Subscriber { get; }
+
+			/// <summary>
+			///		The types of events to unsubscribe from.
+			/// </summary>
+			public ImmutableList<Type> EventTypes { get; }
         }
 
+		/// <summary>
+		///		Notification that an actor has been unsubscribed from one or more event types.
+		/// </summary>
         public class Unsubscribed
+			: CorrelatedMessage
         {
-            public Unsubscribed(string correlationId, IEnumerable<Type> eventTypes)
-            {
-                CorrelationId = correlationId;
+			/// <summary>
+			///		Create a new <see cref="Unsubscribed"/> message.
+			/// </summary>
+			/// <param name="correlationId">
+			///		The message correlation Id used in the original <see cref="Unsubscribe"/> request.
+			/// </param>
+			/// <param name="eventTypes">
+			///		The event types that were unsubscribed from.
+			/// </param>
+			public Unsubscribed(string correlationId, IEnumerable<Type> eventTypes)
+				: base(correlationId)
+			{
                 EventTypes = eventTypes != null ? ImmutableList.CreateRange(eventTypes) : ImmutableList<Type>.Empty;
             }
 
-            public string CorrelationId { get; }
-            public ImmutableList<Type> EventTypes { get; }
+			/// <summary>
+			///		The event types that were unsubscribed from.
+			/// </summary>
+			public ImmutableList<Type> EventTypes { get; }
         }
     }
 
@@ -158,9 +234,9 @@ namespace AKDK.Actors
         /// <param name="eventTypes">
         ///     The types of event messages from which the actor will be unsubscribed.
         /// </param>
-        protected void RemoveSubscriber(IActorRef subscriber, IEnumerable<Type> messageTypes)
+        protected void RemoveSubscriber(IActorRef subscriber, IEnumerable<Type> eventTypes)
         {
-            foreach (Type messageType in messageTypes)
+            foreach (Type messageType in eventTypes)
                 Bus.Unsubscribe(subscriber, messageType);
         }
 
@@ -214,12 +290,12 @@ namespace AKDK.Actors
             protected override bool Classify(TEvent evt, Type eventType) => eventType.IsInstanceOfType(evt);
 
             /// <summary>
-            ///     Determine whether the specified event message matches the specified classifier or a sub-classifier.
+            ///     Determine whether an event classifier represents a child of another parent classifier.
             /// </summary>
-            /// <param name="evt">
+            /// <param name="parent">
             ///     The event message.
             /// </param>
-            /// <param name="eventType">
+            /// <param name="child">
             ///     The event classifier.
             /// </param>
             /// <returns>

@@ -1,0 +1,3 @@
+[*.cs]
+indent_style = tab
+csharp_style_throw_expression = false:none

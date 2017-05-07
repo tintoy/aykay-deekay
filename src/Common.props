@@ -1,8 +1,7 @@
 <Project>
     <!-- Common project settings -->
     <PropertyGroup>
-		<!-- TODO: Enable once structure has stabilised enough to be worth documenting -->
-        <!--<GenerateDocumentationFile>true</GenerateDocumentationFile>-->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <!-- Common package properties -->
