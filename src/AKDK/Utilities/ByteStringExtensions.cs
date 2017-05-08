@@ -2,7 +2,7 @@ using Akka.IO;
 using System;
 using System.Text;
 
-namespace AKDK
+namespace AKDK.Utilities
 {
     /// <summary>
     ///		Extension methods for <see cref="ByteString"/>.

@@ -3,6 +3,8 @@ using System;
 
 namespace AKDK.Messages
 {
+    using Utilities;
+
     /// <summary>
     ///     Response indicating a successful connection to a Docker API.
     /// </summary>
@@ -37,5 +39,10 @@ namespace AKDK.Messages
         ///     The end-point URI for the Docker API.
         /// </summary>
         public Uri EndpointUri { get; }
+
+        /// <summary>
+        ///     Is the connection to the local Docker API?
+        /// </summary>
+        public bool IsLocal => EndpointUri == LocalDocker.EndPointUri;
     }
 }

@@ -12,6 +12,11 @@ namespace AKDK.Messages
         : Request
     {
         /// <summary>
+        ///     The default TCP port for the docker API.
+        /// </summary>
+        public const int DefaultPort = 2375;
+
+        /// <summary>
         ///     Create a new <see cref="Connect"/> message.
         /// </summary>
         /// <param name="endpointUri">
@@ -83,6 +88,6 @@ namespace AKDK.Messages
         /// <returns>
         ///     The <see cref="Connect"/> request.
         /// </returns>
-        public static Connect Tcp(string hostName, int port = 2375, string correlationId = null) => new Connect(new Uri($"tcp://{hostName}:{port}"));
+        public static Connect Tcp(string hostName, int port = DefaultPort, string correlationId = null) => new Connect(new Uri($"tcp://{hostName}:{port}"));
     }
 }

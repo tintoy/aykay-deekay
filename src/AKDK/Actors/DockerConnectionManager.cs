@@ -13,6 +13,11 @@ namespace AKDK.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The Docker connection manager.
+        /// </summary>
+        public static readonly string ActorName = "docker-connection-manager";
+
+        /// <summary>
         ///     Client configuration, keyed API end-point URI.
         /// </summary>
         readonly Dictionary<Uri, DockerClientConfiguration> _configuration = new Dictionary<Uri, DockerClientConfiguration>();
@@ -20,12 +25,12 @@ namespace AKDK.Actors
         /// <summary>
         ///     Connection actors, keyed by API end-point URI.
         /// </summary>
-        readonly Dictionary<Uri, IActorRef> _connectionActors = new Dictionary<Uri, IActorRef>();
+        readonly Dictionary<Uri, IActorRef>                 _connectionActors = new Dictionary<Uri, IActorRef>();
 
         /// <summary>
         ///     Connection API end-point URIs, keyed by connector actor.
         /// </summary>
-        readonly Dictionary<IActorRef, Uri> _connectionEndPoints = new Dictionary<IActorRef, Uri>();
+        readonly Dictionary<IActorRef, Uri>                 _connectionEndPoints = new Dictionary<IActorRef, Uri>();
 
         /// <summary>
         ///     Create a new <see cref="DockerConnectionManager"/> actor.

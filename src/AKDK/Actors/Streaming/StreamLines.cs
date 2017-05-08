@@ -6,6 +6,7 @@ using System.Text;
 namespace AKDK.Actors.Streaming
 {
     using Messages;
+    using Utilities;
 
     /// <summary>
     ///		Actor that reads lines from a stream.

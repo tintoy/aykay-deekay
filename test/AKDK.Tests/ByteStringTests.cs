@@ -6,10 +6,15 @@ using Xunit;
 
 namespace AKDK.Tests
 {
+    using Utilities;
+
     public class ByteStringTests
     {
+        /// <summary>
+        ///     Find 2 bytes in 20 bytes at position 8.s
+        /// </summary>
         [Fact]
-        public void IndexOf_2_20_8() // Find 2 bytes in 20 bytes at position 8.
+        public void IndexOf_2_20_8()
         {
             const string data = "ABCDEFGHIJ";
             const string find = "E";
@@ -26,8 +31,11 @@ namespace AKDK.Tests
             );
         }
 
+        /// <summary>
+        ///     Find 4 bytes in 30 bytes at position 20.
+        /// </summary>
         [Fact]
-        public void IndexOf_2_30_20() // Find 4 bytes in 30 bytes at position 20.
+        public void IndexOf_2_30_20()
         {
             const string data = "ABCDEFGHIJHELLO";
             const string find = "HE";
