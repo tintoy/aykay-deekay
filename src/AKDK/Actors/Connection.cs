@@ -30,7 +30,7 @@ namespace AKDK.Actors
         /// <summary>
         ///     The underlying docker API client for the current connection.
         /// </summary>
-        DockerClient _client;
+        IDockerClient _client;
 
         /// <summary>
         ///     Create a new <see cref="Connection"/> actor.
@@ -38,7 +38,7 @@ namespace AKDK.Actors
         /// <param name="client">
         ///     The underlying docker API client.
         /// </param>
-        public Connection(DockerClient client)
+        public Connection(IDockerClient client)
         {
             _client = client;
 
