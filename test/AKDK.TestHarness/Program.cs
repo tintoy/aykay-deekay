@@ -22,6 +22,7 @@ namespace AKDK.TestHarness
         static readonly Akka.Configuration.Config AkkaConfig = Akka.Configuration.ConfigurationFactory.ParseString(
             @"
                 akka {
+                    loglevel = DEBUG
                     stdout-loglevel = DEBUG
                     suppress-json-serializer-warning = on
                     loggers = [ ""Akka.Event.StandardOutLogger"" ]
@@ -40,7 +41,6 @@ namespace AKDK.TestHarness
 
             try
             {
-                IDockerClient dockerClient = new DockerClientConfiguration(LocalDocker.EndPointUri).CreateClient();
                 using (ActorSystem system = ActorSystem.Create(name: "test-harness", config: AkkaConfig))
                 {
                     IActorRef user = system.ActorOf(actor =>
@@ -49,6 +49,16 @@ namespace AKDK.TestHarness
 
                         IActorRef client = null;
 
+                        actor.Receive<Connected>((connected, context) =>
+                        {
+                            Console.WriteLine("Connected.");
+                            client = connected.Client;
+
+                            Console.WriteLine("Requesting image list...");
+                            client.Tell(new ListImages(
+                                new ImagesListParameters { All = true }
+                            ));
+                        });
                         actor.Receive<ImageList>((imageList, context) =>
                         {
                             Console.WriteLine("Got {0} images:", imageList.Images.Count);
@@ -64,19 +74,7 @@ namespace AKDK.TestHarness
                         actor.OnPreStart = context =>
                         {
                             Console.WriteLine("Connecting...");
-                            client = context.ActorOf(
-                                Props.Create<Client>(
-                                    Connection.Create(dockerClient)
-                                )                         
-                            );
-
-                            Console.WriteLine("Requesting image list...");
-                            client.Tell(new ListImages(
-                                new ImagesListParameters { All = true }
-                            ));
-                            client.Tell(
-                                Connect.Local()
-                            );
+                            context.System.Docker().RequestConnectLocal(context.Self);
                         };
 
                     }, "docker-user");

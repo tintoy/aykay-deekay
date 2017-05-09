@@ -63,6 +63,8 @@ namespace AKDK.Actors
 
             Receive<ListImages>(listImages =>
             {
+                Log.Debug("Received ListImages request '{0}' from '{1}'.", listImages.CorrelationId, Sender);
+
                 // TODO: Out here, we know where to send the response.
 
                 var executeCommand = new Connection.ExecuteCommand(listImages, async dockerClient =>
@@ -75,7 +77,7 @@ namespace AKDK.Actors
                 });
 
                 // TODO: So, for now, we just forward the request (the reply gets sent to our sender).
-                _connection.Forward(executeCommand);
+                _connection.Tell(executeCommand, Sender);
             });
         }
 
@@ -87,7 +89,7 @@ namespace AKDK.Actors
             base.PreStart();
 
             if (_connection == null)
-                _connection = Context.ActorOf(_connectionProps);
+                _connection = Context.ActorOf(_connectionProps, name: "connection");
 
             Context.Watch(_connection);
 

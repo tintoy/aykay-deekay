@@ -40,6 +40,6 @@ namespace AKDK
         ///		A reference to the Docker connection-management actor.
         /// </summary>
 
-        public IActorRef ConnectionManager { get; }
+        internal IActorRef ConnectionManager { get; }
     }
 }

@@ -5,11 +5,11 @@ namespace AKDK.Messages
     /// <summary>
     ///		Represents a Docker API operation that failed.
     /// </summary>
-    public class Failed
+    public class OperationFailure
         : Response
     {
         /// <summary>
-        ///		Create a new <see cref="Failed"/> message.
+        ///		Create a new <see cref="OperationFailure"/> message.
         /// </summary>
         /// <param name="correlationId">
         ///		The message correlation Id that was assigned to the original request message.
@@ -20,7 +20,7 @@ namespace AKDK.Messages
         /// <param name="exception">
         ///		An <see cref="System.Exception"/> representing the failed exception.
         /// </param>
-        public Failed(string correlationId, string operationName, Exception exception)
+        public OperationFailure(string correlationId, string operationName, Exception exception)
             : base(correlationId)
         {
             OperationName = operationName;

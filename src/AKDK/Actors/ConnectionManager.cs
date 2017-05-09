@@ -46,12 +46,30 @@ namespace AKDK.Actors
         {
             Receive<Connect>(connect =>
             {
-                IActorRef client = CreateClient(connect.EndpointUri, connect.Credentials);
-                
-                Sender.Tell(new Connected(client,
-                    endpointUri: connect.EndpointUri,
-                    correlationId: connect.CorrelationId
-                ));
+                try
+                {
+                    Log.Debug("Received connection request '{0}' from '{1}' for '{2}'.",
+                        connect.CorrelationId,
+                        Sender.Path,
+                        connect.EndpointUri
+                    );
+
+                    IActorRef client = GetOrCreateClient(connect);
+
+                    Sender.Tell(new Connected(client,
+                        endpointUri: connect.EndpointUri,
+                        correlationId: connect.CorrelationId
+                    ));
+                }
+                catch (Exception createClientError)
+                {
+                    Sender.Tell(new ConnectionFailure(
+                        exception: createClientError,
+                        correlationId: connect.CorrelationId
+                    ));
+
+                    throw; // Let supervision handle it.
+                }                
             });
             Receive<Terminated>(terminated =>
             {
@@ -85,24 +103,58 @@ namespace AKDK.Actors
         }
 
         /// <summary>
-        ///     Create a new Docker API <see cref="Client"/> actor.
+        ///     Get the supervisor strategy for child actors.
         /// </summary>
-        /// <param name="endpointUri">
-        ///     The end-point URI for the Docker API.
-        /// </param>
-        /// <param name="credentials">
-        ///     Optional credentials for authenticating to the Docker API.
-        /// </param>
-        /// <returns></returns>
-        IActorRef CreateClient(Uri endpointUri, Credentials credentials)
+        /// <returns>
+        ///     The supervisor strategy.
+        /// </returns>
+        protected override SupervisorStrategy SupervisorStrategy()
         {
-            if (endpointUri == null)
-                throw new ArgumentNullException(nameof(endpointUri));
+            // TODO: Determine correct strategy configuration.
 
-            DockerClientConfiguration clientConfiguration = GetClientConfiguration(endpointUri, credentials);
+            return new OneForOneStrategy(
+                maxNrOfRetries: 5,
+                withinTimeRange: TimeSpan.FromSeconds(5),
+                decider: Decider.From(exception =>
+                {
+                    // TODO: Work out what types of exception should be handling here (and what the desired behaviour is).
+
+                    switch (exception)
+                    {
+                        case DockerApiException dockerApiError:
+                        {
+                            return Directive.Resume;
+                        }
+                        default:
+                        {
+                            return Directive.Restart;
+                        }
+                    }
+                })
+            );
+        }
+
+        /// <summary>
+        ///     Get or create the new Docker API <see cref="Client"/> actor for the specified <see cref="Connect"/> request.
+        /// </summary>
+        /// <param name="connectRequest">
+        ///     The <see cref="Connect"/> request message.
+        /// </param>
+        /// <returns>
+        ///     A reference to the <see cref="Client"/> actor.
+        /// </returns>
+        IActorRef GetOrCreateClient(Connect connectRequest)
+        {
+            if (connectRequest == null)
+                throw new ArgumentNullException(nameof(connectRequest));
+            
+            DockerClientConfiguration clientConfiguration = GetClientConfiguration(
+                connectRequest.EndpointUri,
+                connectRequest.Credentials
+            );
 
             IActorRef clientActor;
-            if (!_clientActors.TryGetValue(endpointUri, out clientActor))
+            if (!_clientActors.TryGetValue(connectRequest.EndpointUri, out clientActor))
             {
                 clientActor = Context.ActorOf(
                     Props.Create<Client>(Connection.Create(
@@ -110,8 +162,24 @@ namespace AKDK.Actors
                     )),
                     name: $"client-{_nextClientId++}"
                 );
-                _clientActors.Add(endpointUri, clientActor);
-                _clientEndPoints.Add(clientActor, endpointUri);
+                _clientActors.Add(connectRequest.EndpointUri, clientActor);
+                _clientEndPoints.Add(clientActor, connectRequest.EndpointUri);
+
+                Log.Debug("Created client '{0}' for connection request for '{1}' from '{2}' (CorrelationId = '{3}').",
+                    clientActor.Path,
+                    Sender.Path,
+                    connectRequest.EndpointUri,
+                    connectRequest.CorrelationId
+                );
+            }
+            else
+            {
+                Log.Debug("Retrieved existing client '{0}' for connection request for '{1}' from '{2}' (CorrelationId = '{3}').",
+                    clientActor.Path,
+                    Sender.Path,
+                    connectRequest.EndpointUri,
+                    connectRequest.CorrelationId
+                );
             }
 
             Context.Watch(clientActor);

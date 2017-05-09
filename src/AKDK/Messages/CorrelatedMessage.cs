@@ -2,10 +2,12 @@
 
 namespace AKDK.Messages
 {
+
     /// <summary>
     ///		The base class for messages with a correlation Id.
     /// </summary>
     public abstract class CorrelatedMessage
+        : ICorrelatedMessage
     {
         /// <summary>
         ///		Create a new <see cref="CorrelatedMessage"/>.

@@ -46,14 +46,38 @@ namespace AKDK.Actors
 
             Receive<ExecuteCommand>(executeCommand =>
             {
+                Log.Debug("Received ExecuteCommand '{0}' ('{1}') from '{2}'.",
+                    executeCommand.CorrelationId,
+                    executeCommand.RequestMessage.OperationName,
+                    Sender.Path
+                );
+
                 Execute(executeCommand)
-                    .PipeTo(Self, failure: exception =>
+                    .PipeTo(Self, sender: Self, failure: exception =>
                     {
+                        // Unwrap AggregateException if possible
+                        if (exception is AggregateException aggregateException)
+                        {
+                            aggregateException = aggregateException.Flatten();
+                            if (aggregateException.InnerExceptions.Count == 1)
+                                exception = aggregateException.InnerExceptions[0];
+                        }
+
+                        Log.Error(exception, "ExecuteCommand '{0}' encountered an unhandled {1}; an ErrorResponse will be substituted.",
+                            executeCommand.CorrelationId,
+                            exception.GetType().FullName
+                        );
+
                         return new ErrorResponse(executeCommand.RequestMessage, exception);
                     });
             });
             Receive<CommandResult>(commandResult =>
             {
+                Log.Debug("Received CommandResult '{0}' from '{1}'.",
+                    commandResult.CorrelationId,
+                    Sender.Path
+                );
+
                 InFlightRequest inFlightRequest;
                 if (!_inFlightRequests.TryGetValue(commandResult.CorrelationId, out inFlightRequest))
                 {
@@ -147,6 +171,11 @@ namespace AKDK.Actors
         /// </returns>
         async Task<CommandResult> Execute(ExecuteCommand request)
         {
+            Log.Debug("Executing '{0}' command '{1}'.",
+                request.RequestMessage.OperationName,
+                request.CorrelationId
+            );
+
             CreateRequest(request.RequestMessage, replyTo: Sender);
 
             Response responseMessage = await request.Command(_client);

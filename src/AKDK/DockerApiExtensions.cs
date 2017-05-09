@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 namespace AKDK
 {
+    using Actors;
 	using Messages;
 
 	/// <summary>
@@ -37,7 +38,38 @@ namespace AKDK
         }
 
         /// <summary>
-        ///     Connect to a docker API over TCP.
+        ///     Request a connection to the local docker API.
+        /// </summary>
+        /// <param name="dockerApi">
+        ///     The Docker API extension for Akka.NET.
+        /// </param>
+        /// <param name="replyTo">
+        ///     The actor to which the reply will be sent.
+        /// </param>
+        /// <param name="correlationId">
+        ///     A message correlation Id that will be returned with the response.
+        /// </param>
+        /// <remarks>
+        ///     If successful, a reference to the <see cref="Client"/> actor will be delivered via a <see cref="Connected"/> message.
+        ///     Otherwise, a <see cref="ConnectionFailure"/> message will be delivered.
+        /// </remarks>
+		public static void RequestConnectLocal(this DockerApi dockerApi, IActorRef replyTo = null, string correlationId = null)
+        {
+            if (dockerApi == null)
+                throw new ArgumentNullException(nameof(dockerApi));
+
+            replyTo = replyTo ?? ActorCell.GetCurrentSenderOrNoSender();
+            if (replyTo.IsNobody())
+                throw new InvalidOperationException("Cannot determine the actor to receive the reply.");
+
+            dockerApi.ConnectionManager.Tell(
+                Connect.Local(correlationId),
+                sender: replyTo
+            );
+        }        
+
+        /// <summary>
+        ///     Connect to a docker API over TCP, waiting for the connection to become available.
         /// </summary>
         /// <param name="dockerApi">
         ///     The Docker API extension for Akka.NET.
@@ -65,6 +97,42 @@ namespace AKDK
             );
 
             return connected.Client;
+        }
+
+        /// <summary>
+        ///     Request a connection to a docker API over TCP.
+        /// </summary>
+        /// <param name="dockerApi">
+        ///     The Docker API extension for Akka.NET.
+        /// </param>
+        /// <param name="hostName">
+        ///     The name of the target host.
+        /// </param>
+        /// <param name="port">
+        ///     The target TCP port.
+        /// </param>
+        /// <param name="replyTo">
+        ///     The actor to which the reply will be sent.
+        /// </param>
+        /// <param name="correlationId">
+        ///     A message correlation Id that will be returned with the response.
+        /// </param>
+        /// <remarks>
+        ///     If successful, a reference to the <see cref="Client"/> actor will be delivered via a <see cref="Connected"/> message.
+        /// </remarks>
+		public static void RequestConnectTcp(this DockerApi dockerApi, string hostName, int port = Connect.DefaultPort, IActorRef replyTo = null, string correlationId = null)
+        {
+            if (dockerApi == null)
+                throw new ArgumentNullException(nameof(dockerApi));
+
+            replyTo = replyTo ?? ActorCell.GetCurrentSenderOrNoSender();
+            if (replyTo.IsNobody())
+                throw new InvalidOperationException("Cannot determine the actor to receive the reply.");
+
+            dockerApi.ConnectionManager.Tell(
+                Connect.Local(correlationId),
+                sender: replyTo
+            );
         }
     }
 }
