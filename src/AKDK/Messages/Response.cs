@@ -1,4 +1,6 @@
-﻿namespace AKDK.Messages
+﻿using System;
+
+namespace AKDK.Messages
 {
     /// <summary>
     ///		The base class for messages that represent responses from the Docker API.
@@ -15,6 +17,9 @@
         protected Response(string correlationId)
             : base(correlationId)
         {
+            if (String.IsNullOrWhiteSpace(correlationId))
+                throw new ArgumentException($"Response messages must have a correlation Id.", nameof(correlationId));
+
         }
     }
 }

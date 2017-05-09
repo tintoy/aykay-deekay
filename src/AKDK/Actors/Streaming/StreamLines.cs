@@ -1,5 +1,6 @@
 using Akka.Actor;
 using Akka.IO;
+using System;
 using System.IO;
 using System.Text;
 
@@ -20,22 +21,22 @@ namespace AKDK.Actors.Streaming
         /// <summary>
         ///		The bytes representing a Windows-style line terminator.
         /// </summary>
-        static readonly ByteString WindowsNewLine = ByteString.FromString("\r\n", Encoding.Unicode);
+        static readonly string WindowsNewLine = "\r\n";
 
         /// <summary>
         ///		The bytes representing a Unix-style line terminator.
         /// </summary>
-        static readonly ByteString UnixNewLine = ByteString.FromString("\n", Encoding.Unicode);
+        static readonly string UnixNewLine = "\n";
 
         /// <summary>
         ///		<see cref="Props"/> used to create the <see cref="ReadStream"/> actor for reading from the underlying stream.
         /// </summary>
-        Props       _readStreamProps;
+        Props               _readStreamProps;
 
         /// <summary>
         ///		The <see cref="ReadStream"/> actor used to read from the underlying stream.
         /// </summary>
-        IActorRef   _readStream;
+        IActorRef           _readStream;
 
         /// <summary>
         ///		Create a new <see cref="StreamLines"/> actor.
@@ -49,28 +50,52 @@ namespace AKDK.Actors.Streaming
         /// <param name="stream">
         ///		The <see cref="Stream"/> to read from.
         /// </param>
+        /// <param name="encoding">
+        ///     The expected stream encoding.
+        /// </param>
         /// <param name="bufferSize">
         ///		The buffer size to use when reading from the stream.
         /// </param>
         /// <param name="windowsLineEndings">
         ///		Expect Windows-style line endings (CRLF) instead of Unix-style line endings (CR)?
         /// </param>
-        public StreamLines(string correlationId, IActorRef owner, Stream stream, int bufferSize, bool windowsLineEndings)
+        /// 
+        public StreamLines(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize, bool windowsLineEndings)
         {
+            if (String.IsNullOrWhiteSpace(correlationId))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(correlationId)}.", nameof(correlationId));
+
+            if (owner == null)
+                throw new ArgumentNullException(nameof(owner));
+
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
+            if (encoding == null)
+                throw new ArgumentNullException(nameof(encoding));
+
             _readStreamProps = ReadStream.Create(correlationId, Self, stream, bufferSize);
 
-            ByteString lineEnding = windowsLineEndings ? WindowsNewLine : UnixNewLine;
+            ByteString lineEnding = ByteString.FromString(windowsLineEndings ? WindowsNewLine : UnixNewLine, encoding);
             ByteString buffer = ByteString.Empty;
             bool isEndOfStream = false;
 
             Receive<ReadStream.StreamData>(streamData =>
             {
+                int lineEndingIndex;
                 if (streamData.IsEndOfStream)
                 {
+                    // If we still have data remaining, publish it as the final line.
                     if (buffer.Count > 0)
                     {
+                        // There shouldn't be a line-ending here, since it would have been caught the last time we received stream data.
+                        lineEndingIndex = buffer.IndexOf(lineEnding);
+                        System.Diagnostics.Trace.Assert(lineEndingIndex == -1,
+                            "Received EndOfStream with line-ending at end of buffer."
+                        );
+
                         owner.Tell(new StreamLine(streamData.CorrelationId,
-                            line: buffer.DecodeString(Encoding.Unicode)
+                            line: buffer.DecodeString(encoding)
                         ));
                     }
 
@@ -84,7 +109,7 @@ namespace AKDK.Actors.Streaming
 
                 buffer += streamData.Data;
 
-                int lineEndingIndex = buffer.IndexOf(lineEnding);
+                lineEndingIndex = buffer.IndexOf(lineEnding);
                 if (lineEndingIndex == -1)
                     return;
 
@@ -93,7 +118,7 @@ namespace AKDK.Actors.Streaming
 
                 ByteString line = split.Item1;
                 owner.Tell(new StreamLine(streamData.CorrelationId,
-                    line: line.DecodeString(Encoding.Unicode)
+                    line: line.DecodeString(encoding)
                 ));
             });
             Receive<ReadStream.StreamError>(error =>
@@ -137,16 +162,22 @@ namespace AKDK.Actors.Streaming
         /// <param name="stream">
         ///		The <see cref="Stream"/> to read from.
         /// </param>
+        /// <param name="encoding">
+        ///     The expected stream encoding.
+        /// </param>
         /// <param name="bufferSize">
         ///		The buffer size to use when reading from the stream.
         /// </param>
         /// <param name="windowsLineEndings">
         ///		Expect Windows-style line endings (CRLF) instead of Unix-style line endings (CR)?
         /// </param>
-        public static Props Create(string correlationId, IActorRef owner, Stream stream, int bufferSize = ReadStream.DefaultBufferSize, bool windowsLineEndings = false)
+        public static Props Create(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize = ReadStream.DefaultBufferSize, bool windowsLineEndings = false)
         {
+            if (encoding == null)
+                encoding = Encoding.Unicode;
+
             return Props.Create(
-                () => new StreamLines(correlationId, owner, stream, bufferSize, windowsLineEndings)
+                () => new StreamLines(correlationId, owner, stream, encoding, bufferSize, windowsLineEndings)
             );
         }
 

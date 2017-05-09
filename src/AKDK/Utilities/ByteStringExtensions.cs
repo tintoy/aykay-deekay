@@ -29,6 +29,9 @@ namespace AKDK.Utilities
             {
                 for (int findIndex = 0; findIndex < find.Count; findIndex++)
                 {
+                    if (index + findIndex >= data.Count)
+                        break; // Not enough data left for a match.
+
                     if (data[index + findIndex] != find[findIndex])
                         break;
 

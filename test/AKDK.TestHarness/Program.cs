@@ -6,9 +6,10 @@ using System.Threading;
 
 namespace AKDK.TestHarness
 {
-    using Actors;
+    using Actors.Streaming;
     using Docker.DotNet;
     using Messages;
+    using System.Text.RegularExpressions;
     using Utilities;
 
     /// <summary>
@@ -22,8 +23,8 @@ namespace AKDK.TestHarness
         static readonly Akka.Configuration.Config AkkaConfig = Akka.Configuration.ConfigurationFactory.ParseString(
             @"
                 akka {
-                    loglevel = DEBUG
-                    stdout-loglevel = DEBUG
+                    loglevel = INFO
+                    stdout-loglevel = INFO
                     suppress-json-serializer-warning = on
                     loggers = [ ""Akka.Event.StandardOutLogger"" ]
                 }
@@ -41,6 +42,14 @@ namespace AKDK.TestHarness
 
             try
             {
+                // Match colour for INFO messages from Akka logger.
+                Console.ForegroundColor = ConsoleColor.White;
+
+                // For lines from container logs, strip out everything between SOH / EOT (ASCII control codes).
+                //
+                // TODO: Consider making this behaviour built-in, configured via an option on the GetContainerLogs message.
+                Regex stripHeader = new Regex("\x1.*\x4");
+
                 using (ActorSystem system = ActorSystem.Create(name: "test-harness", config: AkkaConfig))
                 {
                     IActorRef user = system.ActorOf(actor =>
@@ -69,6 +78,25 @@ namespace AKDK.TestHarness
                                 foreach (string repoTag in image.RepoTags)
                                     Console.WriteLine("\t\t{0}", repoTag);
                             }
+
+                            const string containerId = "9f9e42a3829b";
+
+                            Console.WriteLine("Asking for logs of container '{0}'...", containerId);
+                            client.Tell(new GetContainerLogs(containerId, new ContainerLogsParameters
+                            {
+                                ShowStderr = true,
+                                ShowStdout = true
+                            }));
+                        });
+                        actor.Receive<StreamLines.StreamLine>((streamLine, context) =>
+                        {
+                            // AF: The last line here is getting a new-line character at the end. Write a unit test to verify.
+                            string lineWithoutControlCodes = stripHeader.Replace(streamLine.Line, String.Empty);
+                            Console.WriteLine("{0}: Got log line: '{1}'", streamLine.CorrelationId, lineWithoutControlCodes);
+                        });
+                        actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>
+                        {
+                            Console.WriteLine("{0}: Got end-of-stream.", endOfStream.CorrelationId);
                         });
 
                         actor.OnPreStart = context =>

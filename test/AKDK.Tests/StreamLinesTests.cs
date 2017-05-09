@@ -33,7 +33,33 @@ namespace AKDK.Tests
             TestProbe owner = CreateTestProbe(name: "owner");
             MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ");
             IActorRef streamLines = ActorOf(
-                StreamLines.Create("lines-2-buffer-size-3", owner, stream, bufferSize)
+                StreamLines.Create("lines-2-buffer-size-3", owner, stream, Encoding.Unicode, bufferSize)
+            );
+
+            Within(TimeSpan.FromSeconds(5), () =>
+            {
+                owner.ExpectMsg<StreamLines.StreamLine>(streamLine =>
+                {
+                    Assert.Equal("ABCDE", streamLine.Line);
+                });
+                owner.ExpectMsg<StreamLines.StreamLine>(streamLine =>
+                {
+                    Assert.Equal("FGHIJ", streamLine.Line);
+                });
+                owner.ExpectMsg<StreamLines.EndOfStream>();
+                owner.ExpectNoMsg();
+            });
+        }
+
+        [Fact]
+        public void MemoryStream_Lines_2_Trailing_NewLine_BufferSize_3()
+        {
+            const int bufferSize = 3;
+
+            TestProbe owner = CreateTestProbe(name: "owner");
+            MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ\n");
+            IActorRef streamLines = ActorOf(
+                StreamLines.Create("lines-2-buffer-size-3", owner, stream, Encoding.Unicode, bufferSize)
             );
 
             Within(TimeSpan.FromSeconds(5), () =>
@@ -59,7 +85,7 @@ namespace AKDK.Tests
             TestProbe owner = CreateTestProbe(name: "owner");
             MemoryStream stream = CreateMemoryStream("\n\n\n");
             IActorRef streamLines = ActorOf(
-                StreamLines.Create("just-new-lines-3-buffer-size-2", owner, stream, bufferSize),
+                StreamLines.Create("just-new-lines-3-buffer-size-2", owner, stream, Encoding.Unicode, bufferSize),
                 name: "stream-lines"
             );
 

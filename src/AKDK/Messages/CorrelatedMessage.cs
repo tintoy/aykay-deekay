@@ -17,7 +17,7 @@ namespace AKDK.Messages
         /// </param>
         protected CorrelatedMessage(string correlationId)
         {
-            CorrelationId = correlationId ?? Guid.NewGuid().ToString();
+            CorrelationId = correlationId ?? Guid.NewGuid().ToString("N"); // Just digits, no dashes or braces.
         }
 
         /// <summary>

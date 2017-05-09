@@ -1,10 +1,12 @@
 using Docker.DotNet;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AKDK.Actors
 {
     using Messages;
+    using System.IO;
 
     /// <summary>
     ///     Actor that manages a connection to the Docker API.
@@ -17,10 +19,13 @@ namespace AKDK.Actors
         /// <param name="client">
         ///     The <see cref="IDockerClient"/> used to interact with the Docker API.
         /// </param>
+        /// <param name="cancellationToken">
+        ///     A <see cref="CancellationToken"/> that can be used to cancel the operation.
+        /// </param>
         /// <returns>
         ///     The command response (will be asynchronously piped back to the <see cref="Connection"/> actor).
         /// </returns>
-        public delegate Task<Response> Command(IDockerClient client);
+        public delegate Task<Response> Command(IDockerClient client, CancellationToken cancellationToken);
 
         /// <summary>
         ///     Request for a <see cref="Connection"/> to execute a command against the Docker API.
@@ -88,6 +93,11 @@ namespace AKDK.Actors
             public bool Success => Exception == null;
 
             /// <summary>
+            ///     Is the command response streamed?
+            /// </summary>
+            public bool IsStreamed => ResponseStream != null;
+
+            /// <summary>
             ///     The response message that will be sent to the actor that requested the command be executed.
             /// </summary>
             public Response ResponseMessage { get; }
@@ -95,7 +105,12 @@ namespace AKDK.Actors
             /// <summary>
             ///     The exception (if any) that was raised when executing the command.
             /// </summary>
-            public Exception Exception => (ResponseMessage is ErrorResponse errorResponse) ? errorResponse.Exception : null;            
+            public Exception Exception => (ResponseMessage is ErrorResponse errorResponse) ? errorResponse.Exception : null;
+
+            /// <summary>
+            ///     The response stream (if the response is streamed).
+            /// </summary>
+            public Stream ResponseStream => (ResponseMessage is StreamedResponse streamedResponse) ? streamedResponse.ResponseStream : null;
         }
         
         /// <summary>

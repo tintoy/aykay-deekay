@@ -2,10 +2,15 @@
 using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace AKDK.Actors
 {
     using Messages;
+
+    // TODO: Work out how to deal with response for GetContainerLogs - StreamLine message should somehow be transformed into a more suitable message (e.g. ContainerLogLine).
+    // TODO: Maybe add a StreamLineTransform delegate to the ExecuteCommand message?
+    // TODO: If so, there should be a base class for messages representing a client-level view of streamed response data.
 
     /// <summary>
     ///     Actor that aggregates a <see cref="Connection"/>, providing a public surface for the Docker API.
@@ -65,18 +70,30 @@ namespace AKDK.Actors
             {
                 Log.Debug("Received ListImages request '{0}' from '{1}'.", listImages.CorrelationId, Sender);
 
-                // TODO: Out here, we know where to send the response.
-
-                var executeCommand = new Connection.ExecuteCommand(listImages, async dockerClient =>
+                var executeCommand = new Connection.ExecuteCommand(listImages, async (dockerClient, cancellationToken) =>
                 {
-                    // TODO: But in here, we don't.
-
                     IList<ImagesListResponse> images = await dockerClient.Images.ListImagesAsync(listImages.Parameters);
 
                     return new ImageList(listImages.CorrelationId, images);
                 });
 
-                // TODO: So, for now, we just forward the request (the reply gets sent to our sender).
+                _connection.Tell(executeCommand, Sender);
+            });
+            Receive<GetContainerLogs>(getContainerLogs =>
+            {
+                Log.Debug("Received GetContainerLogs request '{0}' from '{1}'.", getContainerLogs.CorrelationId, Sender);
+
+                var executeCommand = new Connection.ExecuteCommand(getContainerLogs, async (dockerClient, cancellationToken) =>
+                {
+                    Stream responseStream = await dockerClient.Containers.GetContainerLogsAsync(
+                        getContainerLogs.ContainerId,
+                        getContainerLogs.Parameters,
+                        cancellationToken
+                    );
+
+                    return new StreamedResponse(getContainerLogs.CorrelationId, responseStream);
+                });
+
                 _connection.Tell(executeCommand, Sender);
             });
         }
