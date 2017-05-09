@@ -17,13 +17,10 @@ namespace AKDK.Actors
         /// <param name="client">
         ///     The <see cref="IDockerClient"/> used to interact with the Docker API.
         /// </param>
-        /// <param name="correlationId">
-        ///     The request message correlation Id.
-        /// </param>
         /// <returns>
         ///     The command response (will be asynchronously piped back to the <see cref="Connection"/> actor).
         /// </returns>
-        public delegate Task<Response> Command(IDockerClient client, string correlationId);
+        public delegate Task<Response> Command(IDockerClient client);
 
         /// <summary>
         ///     Request for a <see cref="Connection"/> to execute a command against the Docker API.
@@ -34,20 +31,29 @@ namespace AKDK.Actors
             /// <summary>
             ///     Create a new <see cref="ExecuteCommand"/> message.
             /// </summary>
-            /// <param name="correlationId">
-            ///     The message correlation Id.
+            /// <param name="requestMessage">
+            ///     The request message for which the command is being executed.
             /// </param>
             /// <param name="command">
             ///     A delegate representing the command to execute.
             /// </param>
-            public ExecuteCommand(string correlationId, Command command)
-                : base(correlationId)
+            public ExecuteCommand(Request requestMessage, Command command)
+                : base(requestMessage.CorrelationId)
             {
+                if (requestMessage == null)
+                    throw new ArgumentNullException(nameof(requestMessage));
+                
                 if (command == null)
                     throw new ArgumentNullException(nameof(command));
 
+                RequestMessage = requestMessage;
                 Command = command;
             }
+
+            /// <summary>
+            ///     The request message for which the command is being executed.
+            /// </summary>
+            public Request RequestMessage { get; }
 
             /// <summary>
             ///     A delegate representing the command to execute.
