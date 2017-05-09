@@ -7,7 +7,7 @@ using System.Collections.Generic;
 namespace AKDK.Actors
 {
     /// <summary>
-    ///     Actor that manages <see cref="DockerConnection"/> actors.
+    ///     Actor that manages <see cref="Connection"/> actors.
     /// </summary>
     public class DockerConnectionManager
         : ReceiveActorEx
@@ -73,7 +73,7 @@ namespace AKDK.Actors
         {
             DockerClientConfiguration clientConfiguration = GetClientConfiguration(endpointUri);
 
-            IActorRef connectionActor = Context.ActorOf(DockerConnection.Create(
+            IActorRef connectionActor = Context.ActorOf(Connection.Create(
                 clientConfiguration.CreateClient()
             ));
             _connectionActors.Add(endpointUri, connectionActor);

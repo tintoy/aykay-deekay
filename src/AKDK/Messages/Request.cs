@@ -16,5 +16,10 @@
             : base(correlationId)
         {
         }
+
+        /// <summary>
+        ///     A short name for the operation represented by the request.
+        /// </summary>
+        public abstract string OperationName { get; }
     }
 }

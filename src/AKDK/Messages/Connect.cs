@@ -9,7 +9,7 @@ namespace AKDK.Messages
     ///     Request to create a connection to a Docker API.
     /// </summary>
     public class Connect
-        : Request
+        : CorrelatedMessage
     {
         /// <summary>
         ///     The default TCP port for the docker API.

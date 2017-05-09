@@ -32,5 +32,10 @@ namespace AKDK.Messages
         /// </summary>
         public ImagesListParameters Parameters { get; }
 
+        /// <summary>
+        ///     A short name for the operation represented by the request.
+        /// </summary>
+        public override string OperationName => "List Images";
+
     }
 }

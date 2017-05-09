@@ -9,7 +9,7 @@ namespace AKDK.Messages
     ///     Response indicating a successful connection to a Docker API.
     /// </summary>
     public class Connected
-        : Response
+        : CorrelatedMessage
     {
         /// <summary>
         ///     Create a new <see cref="Connected"/> message.
