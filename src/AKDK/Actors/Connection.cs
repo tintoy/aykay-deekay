@@ -39,6 +39,9 @@ namespace AKDK.Actors
         /// </param>
         public Connection(IDockerClient client)
         {
+            if (client == null)
+                throw new ArgumentNullException(nameof(client));
+
             _client = client;
 
             Receive<ExecuteCommand>(executeCommand =>

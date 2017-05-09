@@ -38,8 +38,8 @@ namespace AKDK
 				throw new ArgumentNullException(nameof(system));
 			
 			IActorRef manager = system.ActorOf(
-				Props.Create<DockerConnectionManager>(),
-				name: DockerConnectionManager.ActorName
+				Props.Create<ConnectionManager>(),
+				name: ConnectionManager.ActorName
 			);
 
 			return new DockerApi(system, manager);
