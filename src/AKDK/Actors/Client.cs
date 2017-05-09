@@ -14,9 +14,28 @@ namespace AKDK.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     <see cref="Props"/> that can be used to create the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
+        /// </summary>
+        readonly Props  _connectionProps;
+
+        /// <summary>
         ///     A reference to the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
         /// </summary>
-        readonly IActorRef _connection;
+        IActorRef       _connection;
+
+        /// <summary>
+        ///     Create a new <see cref="Client"/> actor.
+        /// </summary>
+        /// <param name="connectionProps">
+        ///     <see cref="Props"/> that can be used to create the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
+        /// </param>
+        public Client(Props connectionProps)
+        {
+            if (connectionProps == null)
+                throw new ArgumentNullException(nameof(connectionProps));
+
+            _connectionProps = connectionProps;
+        }
 
         /// <summary>
         ///     Create a new <see cref="Client"/> actor.
@@ -24,13 +43,22 @@ namespace AKDK.Actors
         /// <param name="connection">
         ///     A reference to the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
         /// </param>
+        /// <remarks>
+        ///     Used for testing purposes (e.g. inject TestProbe).
+        /// </remarks>
         public Client(IActorRef connection)
         {
             if (connection == null)
                 throw new ArgumentNullException(nameof(connection));
 
             _connection = connection;
+        }
 
+        /// <summary>
+        ///     Called when the <see cref="Client"/> is ready to handle requests.
+        /// </summary>
+        void Ready()
+        {
             // TODO: Handle termination of underlying Connection actor.
 
             Receive<ListImages>(listImages =>
@@ -58,7 +86,12 @@ namespace AKDK.Actors
         {
             base.PreStart();
 
+            if (_connection == null)
+                _connection = Context.ActorOf(_connectionProps);
+
             Context.Watch(_connection);
+
+            Become(Ready);
         }
     }
 }

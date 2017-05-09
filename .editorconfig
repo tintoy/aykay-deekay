@@ -2,3 +2,11 @@
 indent_style = space
 indent_size = 4
 csharp_style_throw_expression = false:none
+
+[*.xml]
+indent_style = space
+indent_size = 2
+
+[*.csproj]
+indent_style = space
+indent_size = 2

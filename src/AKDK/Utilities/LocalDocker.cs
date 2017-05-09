@@ -13,7 +13,7 @@ namespace AKDK.Utilities
         /// <summary>
         ///     The local end-point URI, on Windows, for the Docker API.
         /// </summary>
-        static readonly Uri WindowsEndPointUri = new Uri("npipe:////./pipe/docker_engine");
+        static readonly Uri WindowsEndPointUri = new Uri("npipe://./pipe/docker_engine");
 
         /// <summary>
         ///     The local end-point URI, on MacOS, for the Docker API.

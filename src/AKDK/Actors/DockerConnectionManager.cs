@@ -6,6 +6,8 @@ using System.Collections.Generic;
 
 namespace AKDK.Actors
 {
+    using Messages;
+
     /// <summary>
     ///     Actor that manages <see cref="Connection"/> actors.
     /// </summary>
@@ -37,6 +39,17 @@ namespace AKDK.Actors
         /// </summary>
         public DockerConnectionManager()
         {
+            Receive<Connect>(connect =>
+            {
+                DockerClientConfiguration configuration;
+                if (_configuration.TryGetValue(connect.EndpointUri, out configuration))
+                {
+                    configuration = new DockerClientConfiguration(connect.EndpointUri, connect.Credentials);
+                    _configuration.Add(connect.EndpointUri, configuration);
+                }
+
+                // TODO: Connect!
+            });
             Receive<Terminated>(terminated =>
             {
                 Uri endPointUri;

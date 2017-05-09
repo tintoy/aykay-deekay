@@ -70,12 +70,16 @@ namespace AKDK.Actors
             /// <summary>
             ///     Create a new <see cref="CommandResult"/> message.
             /// </summary>
-            /// <param name="correlationId">
-            ///     The message correlation Id.
+            /// <param name="responseMessage">
+            ///     The response message that will be sent to the actor that requested the command be executed.
             /// </param>
-            public CommandResult(string correlationId)
-                : base(correlationId)
+            public CommandResult(Response responseMessage)
+                : base(responseMessage.CorrelationId)
             {
+                if (responseMessage == null)
+                    throw new ArgumentNullException(nameof(responseMessage));
+
+                ResponseMessage = responseMessage;
             }
 
             /// <summary>
@@ -84,14 +88,14 @@ namespace AKDK.Actors
             public bool Success => Exception == null;
 
             /// <summary>
-            ///     The response that will be sent to the actor that requested the command be executed.
+            ///     The response message that will be sent to the actor that requested the command be executed.
             /// </summary>
-            public Response Response { get; }
+            public Response ResponseMessage { get; }
 
             /// <summary>
             ///     The exception (if any) that was raised when executing the command.
             /// </summary>
-            public Exception Exception => (Response is ErrorResponse errorResponse) ? errorResponse.Exception : null;            
+            public Exception Exception => (ResponseMessage is ErrorResponse errorResponse) ? errorResponse.Exception : null;            
         }
         
         /// <summary>

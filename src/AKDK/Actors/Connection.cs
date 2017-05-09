@@ -1,6 +1,5 @@
 using Akka.Actor;
 using Docker.DotNet;
-using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,15 +41,21 @@ namespace AKDK.Actors
         {
             _client = client;
 
-            HandleDockerApiRequests();
-            HandleDockerApiResponses();
+            Receive<ExecuteCommand>(executeCommand =>
+            {
+                Execute(executeCommand)
+                    .PipeTo(Self, failure: exception =>
+                    {
+                        return new ErrorResponse(executeCommand.RequestMessage, exception);
+                    });
+            });
             Receive<CommandResult>(commandResult =>
             {
                 InFlightRequest inFlightRequest;
                 if (!_inFlightRequests.TryGetValue(commandResult.CorrelationId, out inFlightRequest))
                 {
-                    Log.Warning("Received unexpected {0} response (CorrelationId = '{1}').",
-                        commandResult.Response.GetType().Name,
+                    Log.Warning("Received unexpected {0} command result (CorrelationId = '{1}').",
+                        commandResult.ResponseMessage.GetType().Name,
                         commandResult.CorrelationId
                     );
 
@@ -59,7 +64,7 @@ namespace AKDK.Actors
                     return;
                 }
 
-                if (!commandResult.Success)
+                if (commandResult.Success)
                 {
                     Log.Info("{0} command '{1}' succeeded (response will be sent to '{2}').",
                         inFlightRequest.OperationName,
@@ -67,14 +72,15 @@ namespace AKDK.Actors
                         inFlightRequest.ReplyTo.Path
                     );
 
-                    inFlightRequest.ReplyTo.Tell(commandResult.Response);
+                    inFlightRequest.ReplyTo.Tell(commandResult.ResponseMessage);
                 }
                 else
                 {
-                    Log.Info("{0} command '{1}' failed (error response will be sent to '{2}').",
+                    Log.Info("{0} command '{1}' failed (error response will be sent to '{2}'): {3}",
                         inFlightRequest.OperationName,
                         inFlightRequest.CorrelationId,
-                        inFlightRequest.ReplyTo.Path
+                        inFlightRequest.ReplyTo.Path,
+                        commandResult.Exception.Message
                     );
 
                     inFlightRequest.ReplyTo.Tell(new ErrorResponse(
@@ -126,127 +132,23 @@ namespace AKDK.Actors
 
             base.PostStop();
         }
-
+        
         /// <summary>
-        ///		Handle Docker API requests.
+        ///     Execute a command.
         /// </summary>
-        void HandleDockerApiRequests()
-        {
-            Receive<ListImages>(listImages =>
-            {
-                InFlightRequest request = CreateRequest(listImages, replyTo: Sender);
-
-                ListImages(request, listImages.Parameters)
-                    .PipeTo(Self, failure: exception =>
-                    {
-                        return new ErrorResponse(listImages, exception);
-                    });
-            });
-        }
-
-        /// <summary>
-        ///		Handle response messages resulting from Docker API calls.
-        /// </summary>
-        void HandleDockerApiResponses()
-        {
-            Receive<ImageList>(imageList =>
-            {
-                InFlightRequest request;
-                if (!_inFlightRequests.TryGetValue(imageList.CorrelationId, out request))
-                {
-                    Log.Warning("Received unexpected ImageList response (CorrelationId = '{0}').", imageList.CorrelationId);
-
-                    Unhandled(imageList);
-
-                    return;
-                }
-
-                _inFlightRequests.Remove(imageList.CorrelationId);
-
-                request.ReplyTo.Tell(imageList);
-            });
-            Receive<ErrorResponse>(errorResponse =>
-            {
-                InFlightRequest failedRequest;
-                if (!_inFlightRequests.TryGetValue(errorResponse.CorrelationId, out failedRequest))
-                {
-                    Log.Warning("Received unexpected {0} response (CorrelationId = '{1}').",
-                        errorResponse.Request.GetType().Name,
-                        errorResponse.CorrelationId
-                    );
-
-                    Unhandled(errorResponse);
-
-                    return;
-                }
-
-                Log.Error(errorResponse.Exception, "{0} request '{1}' failed: {2}",
-                    failedRequest.OperationName,
-                    errorResponse.CorrelationId,
-                    errorResponse.Exception.Message
-                );
-
-                _inFlightRequests.Remove(errorResponse.CorrelationId);
-
-                if (failedRequest.ResponseStreamer != null)
-                    _responseStreamers.Remove(failedRequest.ResponseStreamer);
-
-                string errorMessage = String.Format("{0} request '{1}' failed: {2}",
-                    failedRequest.OperationName,
-                    errorResponse.CorrelationId,
-                    errorResponse.Exception.Message
-                );
-                failedRequest.ReplyTo.Tell(
-                    new Failed(
-                        correlationId: errorResponse.CorrelationId,
-                        operationName: failedRequest.OperationName,
-                        exception: new Exception(errorMessage, errorResponse.Exception)
-                    )
-                );
-            });
-            // TODO: Handle StreamLines.StreamLine.
-            Receive<StreamLines.EndOfStream>(endOfStream =>
-            {
-                InFlightRequest streamingRequest;
-                if (!_inFlightRequests.TryGetValue(endOfStream.CorrelationId, out streamingRequest))
-                {
-                    Unhandled(endOfStream);
-
-                    return;
-                }
-
-                IActorRef responseStreamer = streamingRequest.ResponseStreamer;
-
-                Log.Info("Response stream for request '{0}' is complete.", endOfStream.CorrelationId);
-
-                _inFlightRequests.Remove(endOfStream.CorrelationId);
-                _responseStreamers.Remove(streamingRequest.ResponseStreamer);
-            });
-        }
-
-        /// <summary>
-        ///		Retrieve a list of images from the Docker API.
-        /// </summary>
-        /// <param name="inFlightRequest">
-        ///		A <see cref="Request"/> representing the request to list images.
-        /// </param>
-        /// <param name="parameters">
-        ///		<see cref="ImagesListParameters"/> used to control operation behaviour.
+        /// <param name="request">
+        ///     An <see cref="ExecuteCommand"/> message indicating the command to execute.
         /// </param>
         /// <returns>
-        ///		An <see cref="ImageList"/> containing the images.
+        ///     The command result.
         /// </returns>
-        async Task<ImageList> ListImages(InFlightRequest inFlightRequest, ImagesListParameters parameters)
+        async Task<CommandResult> Execute(ExecuteCommand request)
         {
-            if (inFlightRequest == null)
-                throw new ArgumentNullException(nameof(inFlightRequest));
+            CreateRequest(request.RequestMessage, replyTo: Sender);
 
-            if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
+            Response responseMessage = await request.Command(_client);
 
-            IList<ImagesListResponse> images = await _client.Images.ListImagesAsync(parameters);
-
-            return new ImageList(inFlightRequest.CorrelationId, images);
+            return new CommandResult(responseMessage);
         }
 
         /// <summary>
@@ -318,7 +220,7 @@ namespace AKDK.Actors
         /// <returns>
         ///     The configured <see cref="Props"/>.
         /// </returns>
-        public static Props Create(DockerClient client)
+        public static Props Create(IDockerClient client)
         {
             return Props.Create(
                 () => new Connection(client)
