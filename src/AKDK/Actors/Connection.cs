@@ -266,12 +266,8 @@ namespace AKDK.Actors
             if (replyTo == null)
                 throw new ArgumentNullException(nameof(replyTo));
 
-            string correlationId = requestMessage.CorrelationId;
-            if (String.IsNullOrWhiteSpace(correlationId))
-                correlationId = Guid.NewGuid().ToString();
-
-            if (_inFlightRequests.ContainsKey(correlationId))
-                throw new InvalidOperationException($"There is already a request with correlation Id '{correlationId}'.");
+            if (_inFlightRequests.ContainsKey(requestMessage.CorrelationId))
+                throw new InvalidOperationException($"There is already a request with correlation Id '{requestMessage.CorrelationId}'.");
 
             InFlightRequest request = new InFlightRequest(requestMessage, replyTo);
             _inFlightRequests.Add(request.CorrelationId, request);
