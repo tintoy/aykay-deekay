@@ -1,9 +1,12 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 
 namespace AKDK.Messages.DockerEvents
 {
+    using Converters;
+
 	/// <summary>
     ///		The base model for Docker event data. 
     /// </summary>
@@ -69,8 +72,9 @@ namespace AKDK.Messages.DockerEvents
         {
             Converters =
             {
-                new Converters.DockerEventConverter(),
-                new Converters.DockerDateConverter()
+                new StringEnumConverter(),
+                new DockerEventConverter(),
+                new DockerDateConverter()
             }
         };
 

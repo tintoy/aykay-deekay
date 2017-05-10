@@ -85,7 +85,6 @@ namespace AKDK.TestHarness
                         });
                         actor.Receive<StreamLines.StreamLine>((streamLine, context) =>
                         {
-                            // AF: The last line here is getting a new-line character at the end. Write a unit test to verify.
                             Console.WriteLine("{0}: Got log line: '{1}'", streamLine.CorrelationId, streamLine.Line);
                         });
                         actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>

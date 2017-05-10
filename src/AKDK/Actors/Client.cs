@@ -23,9 +23,9 @@ namespace AKDK.Actors
         ///     Regular expression that matches the Docker log line prefix.
         /// </summary>
         /// <remarks>
-        ///     For lines from container logs, strip out everything between SOH / EOT (ASCII control codes).
+        ///     For details, see <see href="https://github.com/moby/moby/issues/7375#issuecomment-51462963"/>.
         /// </remarks>
-        static readonly Regex MatchLogPrefix = new Regex("\x1\x0{6}.{1}");
+        static readonly Regex MatchLogPrefix = new Regex("[\x00\x01\x02]\x00{6}.{1}");
 
         /// <summary>
         ///     <see cref="Props"/> that can be used to create the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
@@ -91,6 +91,8 @@ namespace AKDK.Actors
             Receive<GetContainerLogs>(getContainerLogs =>
             {
                 Log.Debug("Received GetContainerLogs request '{0}' from '{1}'.", getContainerLogs.CorrelationId, Sender);
+
+                // TODO: Rather than use StreamLines, create an actor that reads log entries using the Docker log-entry header / framing (see DockerLogEntry class for details).
 
                 var executeCommand = new Connection.ExecuteCommand(
                     getContainerLogs, async (dockerClient, cancellationToken) =>
