@@ -3,6 +3,7 @@ using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace AKDK.Actors
 {
@@ -18,6 +19,14 @@ namespace AKDK.Actors
     public class Client
         : ReceiveActorEx
     {
+        /// <summary>
+        ///     Regular expression that matches the Docker log line prefix.
+        /// </summary>
+        /// <remarks>
+        ///     For lines from container logs, strip out everything between SOH / EOT (ASCII control codes).
+        /// </remarks>
+        static readonly Regex MatchLogPrefix = new Regex("\x1\x0{6}.{1}");
+
         /// <summary>
         ///     <see cref="Props"/> that can be used to create the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
         /// </summary>
@@ -83,16 +92,19 @@ namespace AKDK.Actors
             {
                 Log.Debug("Received GetContainerLogs request '{0}' from '{1}'.", getContainerLogs.CorrelationId, Sender);
 
-                var executeCommand = new Connection.ExecuteCommand(getContainerLogs, async (dockerClient, cancellationToken) =>
-                {
-                    Stream responseStream = await dockerClient.Containers.GetContainerLogsAsync(
-                        getContainerLogs.ContainerId,
-                        getContainerLogs.Parameters,
-                        cancellationToken
-                    );
+                var executeCommand = new Connection.ExecuteCommand(
+                    getContainerLogs, async (dockerClient, cancellationToken) =>
+                    {
+                        Stream responseStream = await dockerClient.Containers.GetContainerLogsAsync(
+                            getContainerLogs.ContainerId,
+                            getContainerLogs.Parameters,
+                            cancellationToken
+                        );
 
-                    return new StreamedResponse(getContainerLogs.CorrelationId, responseStream);
-                });
+                        return new StreamedResponse(getContainerLogs.CorrelationId, responseStream);
+                    },
+                    transformStreamedLine: StripLogPrefix
+                );
 
                 _connection.Tell(executeCommand, Sender);
             });
@@ -111,6 +123,20 @@ namespace AKDK.Actors
             Context.Watch(_connection);
 
             Become(Ready);
+        }
+
+        /// <summary>
+        ///     Strip the Docker log line prefix.
+        /// </summary>
+        /// <param name="logLine">
+        ///     The docker log line.
+        /// </param>
+        /// <returns>
+        ///     The line without the prefix.
+        /// </returns>
+        static string StripLogPrefix(string logLine)
+        {
+            return MatchLogPrefix.Replace(logLine, String.Empty);
         }
     }
 }

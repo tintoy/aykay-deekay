@@ -103,7 +103,7 @@ namespace AKDK.Actors
                             inFlightRequest.ReplyTo.Path
                         );
 
-                        StreamResponseLines(inFlightRequest, commandResult.ResponseStream);
+                        StreamResponseLines(inFlightRequest, commandResult.ResponseStream, commandResult.TransformStreamedLine);
 
                         return; // Command is still running.
                     }
@@ -197,7 +197,7 @@ namespace AKDK.Actors
 
             Response responseMessage = await request.Command(_client, inFlightRequest.Cancellation);
 
-            return new CommandResult(responseMessage);
+            return new CommandResult(responseMessage, request.TransformStreamedLine);
         }
 
         /// <summary>
@@ -235,10 +235,13 @@ namespace AKDK.Actors
         /// <param name="stream">
         ///		The stream to read from.
         /// </param>
+        /// <param name="transform">
+        ///     An optional transform to apply to each line streamed from the response.
+        /// </param>
         /// <returns>
         ///		An <see cref="IActorRef"/> representing the actor that will perform the streaming.
         /// </returns>
-        IActorRef StreamResponseLines(InFlightRequest inFlightRequest, Stream stream)
+        IActorRef StreamResponseLines(InFlightRequest inFlightRequest, Stream stream, StreamLines.TransformLine transform)
         {
             if (inFlightRequest == null)
                 throw new ArgumentNullException(nameof(inFlightRequest));
@@ -248,7 +251,8 @@ namespace AKDK.Actors
 
             IActorRef responseStreamer = Context.ActorOf(
                 StreamLines.Create(inFlightRequest.CorrelationId, inFlightRequest.ReplyTo, stream,
-                    encoding: Encoding.ASCII // TODO: Consider getting this from ExecuteCommand via InFlightRequest rather than assuming ALL streamed Docker API responses are ASCII.
+                    encoding: Encoding.ASCII, // TODO: Consider getting this from ExecuteCommand via InFlightRequest rather than assuming ALL streamed Docker API responses are ASCII.
+                    transform: transform
                 ),
                 name: $"response-stream-{inFlightRequest.CorrelationId}"
             );

@@ -56,11 +56,14 @@ namespace AKDK.Actors.Streaming
         /// <param name="bufferSize">
         ///		The buffer size to use when reading from the stream.
         /// </param>
+        /// <param name="transform">
+        ///     An optional transform to be applied to each line of the streamed response.
+        /// </param>
         /// <param name="windowsLineEndings">
         ///		Expect Windows-style line endings (CRLF) instead of Unix-style line endings (CR)?
         /// </param>
         /// 
-        public StreamLines(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize, bool windowsLineEndings)
+        public StreamLines(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize, TransformLine transform, bool windowsLineEndings)
         {
             if (String.IsNullOrWhiteSpace(correlationId))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(correlationId)}.", nameof(correlationId));
@@ -94,9 +97,13 @@ namespace AKDK.Actors.Streaming
                             "Received EndOfStream with line-ending at end of buffer."
                         );
 
-                        owner.Tell(new StreamLine(streamData.CorrelationId,
-                            line: buffer.DecodeString(encoding)
-                        ));
+                        string lastLine = buffer.DecodeString(encoding);
+                        if (transform != null)
+                            lastLine = transform(lastLine);
+
+                        owner.Tell(
+                            new StreamLine(streamData.CorrelationId, lastLine)
+                        );
                     }
 
                     owner.Tell(
@@ -116,10 +123,14 @@ namespace AKDK.Actors.Streaming
                 var split = buffer.SplitAt(lineEndingIndex);
                 buffer = split.Item2.Drop(lineEnding.Count);
 
-                ByteString line = split.Item1;
-                owner.Tell(new StreamLine(streamData.CorrelationId,
-                    line: line.DecodeString(encoding)
-                ));
+                ByteString lineData = split.Item1;
+                string line = lineData.DecodeString(encoding);
+                if (transform != null)
+                    line = transform(line);
+
+                owner.Tell(
+                    new StreamLine(streamData.CorrelationId, line)
+                );
             });
             Receive<ReadStream.StreamError>(error =>
             {
@@ -168,18 +179,32 @@ namespace AKDK.Actors.Streaming
         /// <param name="bufferSize">
         ///		The buffer size to use when reading from the stream.
         /// </param>
+        /// <param name="transform">
+        ///     An optional transform to be applied to each line of the streamed response.
+        /// </param>
         /// <param name="windowsLineEndings">
         ///		Expect Windows-style line endings (CRLF) instead of Unix-style line endings (CR)?
         /// </param>
-        public static Props Create(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize = ReadStream.DefaultBufferSize, bool windowsLineEndings = false)
+        public static Props Create(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize = ReadStream.DefaultBufferSize, TransformLine transform = null, bool windowsLineEndings = false)
         {
             if (encoding == null)
                 encoding = Encoding.Unicode;
 
             return Props.Create(
-                () => new StreamLines(correlationId, owner, stream, encoding, bufferSize, windowsLineEndings)
+                () => new StreamLines(correlationId, owner, stream, encoding, bufferSize, transform, windowsLineEndings)
             );
         }
+
+        /// <summary>
+        ///     Delegate used to transfer each line from the stream.
+        /// </summary>
+        /// <param name="line">
+        ///     The original line.
+        /// </param>
+        /// <returns>
+        ///     The transformed line.
+        /// </returns>
+        public delegate string TransformLine(string line);
 
         /// <summary>
         ///		Represents a line of text from a stream (without the line terminator).

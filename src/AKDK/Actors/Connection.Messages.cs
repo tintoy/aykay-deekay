@@ -1,12 +1,13 @@
 using Docker.DotNet;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AKDK.Actors
 {
+    using Streaming;
     using Messages;
-    using System.IO;
 
     /// <summary>
     ///     Actor that manages a connection to the Docker API.
@@ -42,7 +43,10 @@ namespace AKDK.Actors
             /// <param name="command">
             ///     A delegate representing the command to execute.
             /// </param>
-            public ExecuteCommand(Request requestMessage, Command command)
+            /// <param name="transformStreamedLine">
+            ///     An optional transform applied to each line of the response (if streamed).
+            /// </param>
+            public ExecuteCommand(Request requestMessage, Command command, StreamLines.TransformLine transformStreamedLine = null)
                 : base(requestMessage.CorrelationId)
             {
                 if (requestMessage == null)
@@ -53,6 +57,7 @@ namespace AKDK.Actors
 
                 RequestMessage = requestMessage;
                 Command = command;
+                TransformStreamedLine = transformStreamedLine;
             }
 
             /// <summary>
@@ -64,6 +69,11 @@ namespace AKDK.Actors
             ///     A delegate representing the command to execute.
             /// </summary>
             public Command Command { get; }
+
+            /// <summary>
+            ///     The transform (if any) applied to each line of the response (if streamed).
+            /// </summary>
+            public StreamLines.TransformLine TransformStreamedLine { get; }
         }
 
         /// <summary>
@@ -78,13 +88,17 @@ namespace AKDK.Actors
             /// <param name="responseMessage">
             ///     The response message that will be sent to the actor that requested the command be executed.
             /// </param>
-            public CommandResult(Response responseMessage)
+            /// <param name="transformStreamedLine">
+            ///     An optional transform applied to each line of the response (if streamed).
+            /// </param>
+            public CommandResult(Response responseMessage, StreamLines.TransformLine transformStreamedLine)
                 : base(responseMessage.CorrelationId)
             {
                 if (responseMessage == null)
                     throw new ArgumentNullException(nameof(responseMessage));
 
                 ResponseMessage = responseMessage;
+                TransformStreamedLine = transformStreamedLine;
             }
 
             /// <summary>
@@ -111,6 +125,11 @@ namespace AKDK.Actors
             ///     The response stream (if the response is streamed).
             /// </summary>
             public Stream ResponseStream => (ResponseMessage is StreamedResponse streamedResponse) ? streamedResponse.ResponseStream : null;
+
+            /// <summary>
+            ///     The transform (if any) applied to each line of the response (if streamed).
+            /// </summary>
+            public StreamLines.TransformLine TransformStreamedLine { get; }
         }
         
         /// <summary>

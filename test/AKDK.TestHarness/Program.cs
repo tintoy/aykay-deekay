@@ -45,11 +45,6 @@ namespace AKDK.TestHarness
                 // Match colour for INFO messages from Akka logger.
                 Console.ForegroundColor = ConsoleColor.White;
 
-                // For lines from container logs, strip out everything between SOH / EOT (ASCII control codes).
-                //
-                // TODO: Consider making this behaviour built-in, configured via an option on the GetContainerLogs message.
-                Regex stripHeader = new Regex("\x1.*\x4");
-
                 using (ActorSystem system = ActorSystem.Create(name: "test-harness", config: AkkaConfig))
                 {
                     IActorRef user = system.ActorOf(actor =>
@@ -79,7 +74,7 @@ namespace AKDK.TestHarness
                                     Console.WriteLine("\t\t{0}", repoTag);
                             }
 
-                            const string containerId = "9f9e42a3829b";
+                            const string containerId = "b2ebc0e522e3";
 
                             Console.WriteLine("Asking for logs of container '{0}'...", containerId);
                             client.Tell(new GetContainerLogs(containerId, new ContainerLogsParameters
@@ -91,8 +86,7 @@ namespace AKDK.TestHarness
                         actor.Receive<StreamLines.StreamLine>((streamLine, context) =>
                         {
                             // AF: The last line here is getting a new-line character at the end. Write a unit test to verify.
-                            string lineWithoutControlCodes = stripHeader.Replace(streamLine.Line, String.Empty);
-                            Console.WriteLine("{0}: Got log line: '{1}'", streamLine.CorrelationId, lineWithoutControlCodes);
+                            Console.WriteLine("{0}: Got log line: '{1}'", streamLine.CorrelationId, streamLine.Line);
                         });
                         actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>
                         {
