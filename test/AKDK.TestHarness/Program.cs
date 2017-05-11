@@ -129,28 +129,24 @@ namespace AKDK.TestHarness
                         actor.Receive<ContainerStarted>((containerStarted, context) =>
                         {
                             Console.WriteLine("Started container '{0}'.", containerStarted.ContainerId);
-                            Console.WriteLine("Waiting 5 seconds for container process to exit...");
-
-                            Thread.Sleep(
-                                TimeSpan.FromSeconds(5)
-                            );
-
+                            
                             string containerId = containerStarted.ContainerId;
 
                             Console.WriteLine("Asking for logs of container '{0}'...", containerId);
                             client.Tell(new GetContainerLogs(containerId, new ContainerLogsParameters
                             {
                                 ShowStderr = true,
-                                ShowStdout = true
+                                ShowStdout = true,
+                                Follow = true // Continue to stream logs until container exits.
                             }));
                         });
                         actor.Receive<StreamLines.StreamLine>((streamLine, context) =>
                         {
-                            Console.WriteLine("{0}: Got log line: '{1}'", streamLine.CorrelationId, streamLine.Line);
+                            Console.WriteLine("LOG({0}): '{1}'", streamLine.CorrelationId, streamLine.Line);
                         });
                         actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>
                         {
-                            Console.WriteLine("{0}: Got end-of-stream.", endOfStream.CorrelationId);
+                            Console.WriteLine("LOG({0}): EOF", endOfStream.CorrelationId);
 
                             completed.Set();
                         });
