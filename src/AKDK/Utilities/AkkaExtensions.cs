@@ -9,6 +9,29 @@ namespace AKDK.Utilities
     public static class AkkaExtensions
     {
         /// <summary>
+        ///     Determine whether another actor path is the direct parent of the actor path.
+        /// </summary>
+        /// <param name="actorPath">
+        ///     The actor path.
+        /// </param>
+        /// <param name="otherActorPath">
+        ///     The other actor path.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if <paramref name="otherActorPath"/> is the direct parent of <paramref name="actorPath"/>; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsParentOf(this ActorPath actorPath, ActorPath otherActorPath)
+        {
+            if (actorPath == null)
+                throw new ArgumentNullException(nameof(actorPath));
+
+            if (otherActorPath == null)
+                throw new ArgumentNullException(nameof(otherActorPath));
+
+            return actorPath.Parent == otherActorPath;
+        }
+
+        /// <summary>
         ///     Determine whether another actor is the direct parent of the actor.
         /// </summary>
         /// <param name="actor">
@@ -28,7 +51,30 @@ namespace AKDK.Utilities
             if (otherActor == null)
                 throw new ArgumentNullException(nameof(otherActor));
 
-            return actor.Path.Parent == otherActor.Path;
+            return actor.Path.IsParentOf(otherActor.Path);
+        }
+
+        /// <summary>
+        ///     Determine whether another actor path is the direct child of the actor path.
+        /// </summary>
+        /// <param name="actorPath">
+        ///     The actor path.
+        /// </param>
+        /// <param name="otherActorPath">
+        ///     The other actor path.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if <paramref name="otherActorPath"/> is the direct child of <paramref name="actorPath"/>; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsChildOf(this ActorPath actorPath, ActorPath otherActorPath)
+        {
+            if (actorPath == null)
+                throw new ArgumentNullException(nameof(actorPath));
+
+            if (otherActorPath == null)
+                throw new ArgumentNullException(nameof(otherActorPath));
+
+            return otherActorPath.IsParentOf(actorPath);
         }
 
         /// <summary>
@@ -57,6 +103,39 @@ namespace AKDK.Utilities
         /// <summary>
         ///     Determine whether another actor is a descendent of the actor.
         /// </summary>
+        /// <param name="actorPath">
+        ///     The actor.
+        /// </param>
+        /// <param name="otherActorPath">
+        ///     The other actor.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if <paramref name="otherActorPath"/> is a descendant of <paramref name="actorPath"/>; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsDescendantOf(this ActorPath actorPath, ActorPath otherActorPath)
+        {
+            if (actorPath == null)
+                throw new ArgumentNullException(nameof(actorPath));
+
+            if (otherActorPath == null)
+                throw new ArgumentNullException(nameof(otherActorPath));
+
+            ActorPath otherParentPath = otherActorPath.Parent;
+
+            while (otherParentPath != otherParentPath.Root)
+            {
+                if (otherParentPath == actorPath)
+                    return true;
+
+                otherParentPath = otherParentPath.Parent;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Determine whether another actor is a descendent of the actor.
+        /// </summary>
         /// <param name="actor">
         ///     The actor.
         /// </param>
@@ -74,18 +153,7 @@ namespace AKDK.Utilities
             if (otherActor == null)
                 throw new ArgumentNullException(nameof(otherActor));
 
-            ActorPath actorPath = actor.Path;
-            ActorPath otherParentPath = otherActor.Path.Parent;
-
-            while (otherParentPath != otherParentPath.Root)
-            {
-                if (otherParentPath == actorPath)
-                    return true;
-
-                otherParentPath = otherParentPath.Parent;
-            }
-
-            return false;
+            return actor.Path.IsDescendantOf(otherActor.Path);
         }
 
         /// <summary>
