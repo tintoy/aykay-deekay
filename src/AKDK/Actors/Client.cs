@@ -128,9 +128,8 @@ namespace AKDK.Actors
                             cancellationToken
                         );
 
-                        return new StreamedResponse(getContainerLogs.CorrelationId, responseStream);
-                    },
-                    transformStreamedLine: StripLogPrefix
+                        return new StreamedResponse(getContainerLogs.CorrelationId, responseStream, isLog: true);
+                    }
                 );
 
                 _connection.Tell(executeCommand, Sender);

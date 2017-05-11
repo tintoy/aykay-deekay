@@ -18,18 +18,27 @@ namespace AKDK.Messages
         /// <param name="responseStream">
         ///     The response stream.
         /// </param>
-        public StreamedResponse(string correlationId, Stream responseStream)
+        /// <param name="isLog">
+        ///     Is the stream in Docker log format?
+        /// </param>
+        public StreamedResponse(string correlationId, Stream responseStream, bool isLog = false)
             : base(correlationId)
         {
             if (responseStream == null)
                 throw new ArgumentNullException(nameof(responseStream));
 
             ResponseStream = responseStream;
+            IsLog = isLog;
         }
 
         /// <summary>
         ///     The response stream.
         /// </summary>
         public Stream ResponseStream { get; }
+
+        /// <summary>
+        ///     Is the stream in Docker log format?
+        /// </summary>
+        public bool IsLog { get; }
     }
 }

@@ -2,7 +2,6 @@
 using Akka.Actor.Dsl;
 using Docker.DotNet.Models;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 namespace AKDK.TestHarness
@@ -140,13 +139,17 @@ namespace AKDK.TestHarness
                                 Follow = true // Continue to stream logs until container exits.
                             }));
                         });
-                        actor.Receive<StreamLines.StreamLine>((streamLine, context) =>
+                        actor.Receive<DockerLogEntry>((logEntry, context) =>
                         {
-                            Console.WriteLine("LOG({0}): '{1}'", streamLine.CorrelationId, streamLine.Line);
+                            Console.WriteLine("{0}({1}): '{2}'",
+                                logEntry.StreamType,
+                                logEntry.CorrelationId,
+                                logEntry.Text.TrimEnd('\n')
+                            );
                         });
-                        actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>
+                        actor.Receive<EndOfLog>((endOfLog, context) =>
                         {
-                            Console.WriteLine("LOG({0}): EOF", endOfStream.CorrelationId);
+                            Console.WriteLine("EndOfLog({0})", endOfLog.CorrelationId);
 
                             completed.Set();
                         });

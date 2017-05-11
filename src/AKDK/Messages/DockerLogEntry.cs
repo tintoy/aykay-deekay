@@ -1,6 +1,5 @@
 ﻿using Akka.IO;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AKDK.Messages
@@ -9,11 +8,17 @@ namespace AKDK.Messages
 	///     The header for a line from a Docker container log.
 	/// </summary>
 	public class DockerLogEntry
+        : CorrelatedMessage
 	{
-		/// <summary>
-		///     The length of the header for a Docker log entry.
-		/// </summary>
-		public const int HeaderLength = 8;
+        /// <summary>
+        ///     The default encoding used in Docker logs.
+        /// </summary>
+        public static readonly Encoding DefaultEncoding = Encoding.ASCII;
+
+        /// <summary>
+        ///     The length of the header for a Docker log entry.
+        /// </summary>
+        public const int HeaderLength = 8;
 
         /// <summary>
 		///     The 0-based offset of the frame size bytes within the header for a Docker log entry.
@@ -29,7 +34,11 @@ namespace AKDK.Messages
 		/// <param name="data">
 		///     The log entry data.
 		/// </param>
-		public DockerLogEntry(DockerLogStreamType streamType, ByteString data)
+        /// <param name="correlationId">
+        ///     An optional message correlation Id.
+        /// </param>
+		public DockerLogEntry(DockerLogStreamType streamType, ByteString data, string correlationId = null)
+            : base(correlationId)
 		{
 			if (data == null)
 				throw new ArgumentNullException(nameof(data));
@@ -48,16 +57,24 @@ namespace AKDK.Messages
 		/// </summary>
 		public ByteString Data { get; }
 
+        /// <summary>
+        ///     The log entry text.
+        /// </summary>
+        public string Text => Data.DecodeString(DefaultEncoding);
+
 		/// <summary>
 		///     Read a <see cref="DockerLogEntry"/> from the specified data.
 		/// </summary>
 		/// <param name="data">
 		///     A <see cref="ByteString"/> containing the data.
 		/// </param>
+        /// <param name="correlationId">
+        ///     An optional message-correlation Id.
+        /// </param>
 		/// <returns>
 		///     The log entry (or <c>null</c>, if not enough data is available) and any remaining data.
 		/// </returns>
-		public static (DockerLogEntry logEntry, ByteString remainingData) ReadFrom(ByteString data)
+		public static (DockerLogEntry logEntry, ByteString remainingData) ReadFrom(ByteString data, string correlationId = null)
 		{
 			if (data == null)
 				throw new ArgumentNullException(nameof(data));
@@ -69,7 +86,7 @@ namespace AKDK.Messages
 			ByteString logEntryData = data.Drop(HeaderLength).Take(logEntryLength);
 
 			return (
-				logEntry: new DockerLogEntry(streamType, logEntryData),
+				logEntry: new DockerLogEntry(streamType, logEntryData, correlationId),
 				remainingData: data.Drop(HeaderLength + logEntryLength)
 			);
 		}
@@ -99,9 +116,10 @@ namespace AKDK.Messages
 			if (data.Count < HeaderLength)
 				return (streamType: DockerLogStreamType.Unknown, length: -1, isValid: false);
 
-            
+			byte[] header = data.Slice(0, HeaderLength).ToArray();
 
-			byte[] header = data.Slice(0, HeaderLength - 1).ToArray();
+            // Switch to little-endian.
+            Array.Reverse(header, index: 4, length: 4);
 
 			return (
 				streamType: (DockerLogStreamType)header[0],

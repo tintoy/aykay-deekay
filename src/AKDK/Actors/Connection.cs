@@ -105,13 +105,26 @@ namespace AKDK.Actors
                 {
                     if (commandResult.IsStreamed)
                     {
-                        Log.Debug("{0} command '{1}' succeeded (response will be streamed to '{2}').",
-                            inFlightRequest.OperationName,
-                            inFlightRequest.CorrelationId,
-                            inFlightRequest.ReplyTo.Path
-                        );
+                        if (commandResult.IsLog)
+                        {
+                            Log.Debug("{0} command '{1}' succeeded (response will be streamed as log entries to '{2}').",
+                                inFlightRequest.OperationName,
+                                inFlightRequest.CorrelationId,
+                                inFlightRequest.ReplyTo.Path
+                            );
 
-                        StreamResponseLines(inFlightRequest, commandResult.ResponseStream, commandResult.TransformStreamedLine);
+                            StreamLogEntries(inFlightRequest, commandResult.ResponseStream);
+                        }
+                        else
+                        {
+                            Log.Debug("{0} command '{1}' succeeded (response will be streamed to '{2}').",
+                                inFlightRequest.OperationName,
+                                inFlightRequest.CorrelationId,
+                                inFlightRequest.ReplyTo.Path
+                            );
+
+                            StreamResponseLines(inFlightRequest, commandResult.ResponseStream);
+                        }
 
                         return; // Command is still running.
                     }
@@ -205,7 +218,7 @@ namespace AKDK.Actors
 
             Response responseMessage = await request.Command(_client, inFlightRequest.Cancellation);
 
-            return new CommandResult(responseMessage, request.TransformStreamedLine);
+            return new CommandResult(responseMessage);
         }
 
         /// <summary>
@@ -243,13 +256,10 @@ namespace AKDK.Actors
         /// <param name="stream">
         ///		The stream to read from.
         /// </param>
-        /// <param name="transform">
-        ///     An optional transform to apply to each line streamed from the response.
-        /// </param>
         /// <returns>
         ///		An <see cref="IActorRef"/> representing the actor that will perform the streaming.
         /// </returns>
-        IActorRef StreamResponseLines(InFlightRequest inFlightRequest, Stream stream, StreamLines.TransformLine transform)
+        IActorRef StreamResponseLines(InFlightRequest inFlightRequest, Stream stream)
         {
             if (inFlightRequest == null)
                 throw new ArgumentNullException(nameof(inFlightRequest));
@@ -259,10 +269,44 @@ namespace AKDK.Actors
 
             IActorRef responseStreamer = Context.ActorOf(
                 StreamLines.Create(inFlightRequest.CorrelationId, inFlightRequest.ReplyTo, stream,
-                    encoding: Encoding.ASCII, // TODO: Consider getting this from ExecuteCommand via InFlightRequest rather than assuming ALL streamed Docker API responses are ASCII.
-                    transform: transform
+                    encoding: Encoding.ASCII // TODO: Consider getting this from ExecuteCommand via InFlightRequest rather than assuming ALL streamed Docker API responses are ASCII.
                 ),
                 name: $"response-stream-{inFlightRequest.CorrelationId}"
+            );
+
+            InFlightRequest streamingRequest = inFlightRequest.WithResponseStreamer(responseStreamer);
+
+            _inFlightRequests[streamingRequest.CorrelationId] = streamingRequest;
+            _responseStreamers.Add(responseStreamer, streamingRequest);
+
+            Context.Watch(responseStreamer);
+
+            return responseStreamer;
+        }
+
+        /// <summary>
+        ///		Pipe log entries lines from a Docker API response stream back to the requesting actor.
+        /// </summary>
+        /// <param name="inFlightRequest">
+        ///		The in-flight request for which a response will be streamed.
+        /// </param>
+        /// <param name="stream">
+        ///		The stream to read from.
+        /// </param>
+        /// <returns>
+        ///		An <see cref="IActorRef"/> representing the actor that will perform the streaming.
+        /// </returns>
+        IActorRef StreamLogEntries(InFlightRequest inFlightRequest, Stream stream)
+        {
+            if (inFlightRequest == null)
+                throw new ArgumentNullException(nameof(inFlightRequest));
+
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
+            IActorRef responseStreamer = Context.ActorOf(
+                LogParser.Create(inFlightRequest.CorrelationId, inFlightRequest.ReplyTo, stream),
+                name: $"log-stream-{inFlightRequest.CorrelationId}"
             );
 
             InFlightRequest streamingRequest = inFlightRequest.WithResponseStreamer(responseStreamer);
