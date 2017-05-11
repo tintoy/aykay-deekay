@@ -95,18 +95,12 @@ namespace AKDK.TestHarness
                             CreateContainerParameters createContainerParameters = new CreateContainerParameters
                             {
                                 Image = imageName,
-                                HostConfig = new HostConfig
-                                {
-                                    LogConfig = new LogConfig
-                                    {
-                                        Type = "json-file",
-                                        Config = new Dictionary<string, string>()
-                                    }
-                                },
                                 AttachStdout = true,
                                 AttachStderr = true,
                                 Tty = false
                             };
+
+                            // Needed if you want to get logs from the API ("systemd" logger is also supported).
                             createContainerParameters.UseJsonFileLogger();
 
                             client.Tell(
