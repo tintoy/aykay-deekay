@@ -117,22 +117,35 @@ namespace AKDK.Actors
             {
                 Log.Debug("Received GetContainerLogs request '{0}' from '{1}'.", getContainerLogs.CorrelationId, Sender);
 
-                // TODO: Rather than use StreamLines, create an actor that reads log entries using the Docker log-entry header / framing (see DockerLogEntry class for details).
+                var executeCommand = new Connection.ExecuteCommand(getContainerLogs, async (dockerClient, cancellationToken) =>
+                {
+                    Stream responseStream = await dockerClient.Containers.GetContainerLogsAsync(
+                        getContainerLogs.ContainerId,
+                        getContainerLogs.Parameters,
+                        cancellationToken
+                    );
 
-                var executeCommand = new Connection.ExecuteCommand(
-                    getContainerLogs, async (dockerClient, cancellationToken) =>
-                    {
-                        Stream responseStream = await dockerClient.Containers.GetContainerLogsAsync(
-                            getContainerLogs.ContainerId,
-                            getContainerLogs.Parameters,
-                            cancellationToken
-                        );
-
-                        return new StreamedResponse(getContainerLogs.CorrelationId, responseStream, isLog: true);
-                    }
-                );
+                    return new StreamedResponse(getContainerLogs.CorrelationId, responseStream, format: StreamedResponseFormat.Log);
+                });
 
                 _connection.Tell(executeCommand, Sender);
+            });
+            Receive<MonitorContainerEvents>(monitorContainerEvents =>
+            {
+                Log.Debug("Received MonitorContainerEvents request '{0}' from '{1}'.", monitorContainerEvents.CorrelationId, Sender);
+
+                var executeCommand = new Connection.ExecuteCommand(monitorContainerEvents, async (dockerClient, cancellationToken) =>
+                {
+                    Stream responseStream = await dockerClient.Miscellaneous.MonitorEventsAsync(monitorContainerEvents.Parameters, cancellationToken);
+
+                    return new StreamedResponse(monitorContainerEvents.CorrelationId, responseStream, format: StreamedResponseFormat.Events);
+                });
+
+                _connection.Tell(executeCommand, Sender);
+            });
+            Receive<CancelRequest>(cancelRequest =>
+            {
+                _connection.Forward(cancelRequest);
             });
         }
 

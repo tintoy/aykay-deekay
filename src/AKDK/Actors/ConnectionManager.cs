@@ -11,6 +11,8 @@ namespace AKDK.Actors
 {
     using Messages;
 
+    // TODO: Each Client actor should have a single owner, and the ConnectionManager (which supervises them) should notify that owner if their client dies.
+
     /// <summary>
     ///     Actor that manages <see cref="Client"/> / <see cref="Connection"/> actors.
     /// </summary>

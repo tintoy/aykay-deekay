@@ -79,7 +79,7 @@ namespace AKDK.Actors
                         );
 
                         return new ErrorResponse(executeCommand.RequestMessage, exception);
-                    });
+                    });                
             });
             Receive<CommandResult>(commandResult =>
             {
@@ -105,25 +105,36 @@ namespace AKDK.Actors
                 {
                     if (commandResult.IsStreamed)
                     {
-                        if (commandResult.IsLog)
+                        switch (commandResult.Format)
                         {
-                            Log.Debug("{0} command '{1}' succeeded (response will be streamed as log entries to '{2}').",
-                                inFlightRequest.OperationName,
-                                inFlightRequest.CorrelationId,
-                                inFlightRequest.ReplyTo.Path
-                            );
+                            case StreamedResponseFormat.Log:
+                            {
+                                Log.Debug("{0} command '{1}' succeeded (response will be streamed as log entries to '{2}').",
+                                    inFlightRequest.OperationName,
+                                    inFlightRequest.CorrelationId,
+                                    inFlightRequest.ReplyTo.Path
+                                );
 
-                            StreamLogEntries(inFlightRequest, commandResult.ResponseStream);
-                        }
-                        else
-                        {
-                            Log.Debug("{0} command '{1}' succeeded (response will be streamed to '{2}').",
-                                inFlightRequest.OperationName,
-                                inFlightRequest.CorrelationId,
-                                inFlightRequest.ReplyTo.Path
-                            );
+                                StreamLogEntries(inFlightRequest, commandResult.ResponseStream);
 
-                            StreamResponseLines(inFlightRequest, commandResult.ResponseStream);
+                                break;
+                            }
+                            case StreamedResponseFormat.Events:
+                            {
+                                Log.Debug("{0} command '{1}' succeeded (response will be streamed to '{2}').",
+                                    inFlightRequest.OperationName,
+                                    inFlightRequest.CorrelationId,
+                                    inFlightRequest.ReplyTo.Path
+                                );
+
+                                StreamEvents(inFlightRequest, commandResult.ResponseStream);
+
+                                break;
+                            }
+                            default:
+                            {
+                                throw new InvalidOperationException($"Unrecognised stream format: '{commandResult.Format}'.");
+                            }
                         }
 
                         return; // Command is still running.
@@ -155,6 +166,39 @@ namespace AKDK.Actors
                 }
 
                 _inFlightRequests.Remove(commandResult.CorrelationId);
+            });
+            Receive<CancelRequest>(cancelRequest =>
+            {
+                Log.Debug("Received CancelRequest '{0}' from '{1}'.",
+                    cancelRequest.CorrelationId,
+                    Sender.Path
+                );
+
+                InFlightRequest inFlightRequest;
+                if (!_inFlightRequests.TryGetValue(cancelRequest.CorrelationId, out inFlightRequest))
+                {
+                    Log.Warning("Received unexpected cancellation request (CorrelationId = '{0}').",
+                        cancelRequest.CorrelationId
+                    );
+
+                    Unhandled(cancelRequest);
+
+                    return;
+                }
+
+                Log.Debug("Cancelling request '{0}' (originally initiated for '{1}').",
+                    cancelRequest.CorrelationId,
+                    inFlightRequest.ReplyTo
+                );
+                inFlightRequest.Cancel();
+
+                if (inFlightRequest.ResponseStreamer != null)
+                {
+                    _responseStreamers.Remove(inFlightRequest.ResponseStreamer);
+                    Context.Unwatch(inFlightRequest.ResponseStreamer);
+                }
+
+                _inFlightRequests.Remove(cancelRequest.CorrelationId);
             });
             Receive<Terminated>(terminated =>
             {
@@ -248,7 +292,7 @@ namespace AKDK.Actors
         }
 
         /// <summary>
-        ///		Pipe lines from a Docker API response stream back to the requesting actor.
+        ///		Pipe events from a Docker API response stream back to the requesting actor.
         /// </summary>
         /// <param name="inFlightRequest">
         ///		The in-flight request for which a response will be streamed.
@@ -259,7 +303,7 @@ namespace AKDK.Actors
         /// <returns>
         ///		An <see cref="IActorRef"/> representing the actor that will perform the streaming.
         /// </returns>
-        IActorRef StreamResponseLines(InFlightRequest inFlightRequest, Stream stream)
+        IActorRef StreamEvents(InFlightRequest inFlightRequest, Stream stream)
         {
             if (inFlightRequest == null)
                 throw new ArgumentNullException(nameof(inFlightRequest));
@@ -268,10 +312,8 @@ namespace AKDK.Actors
                 throw new ArgumentNullException(nameof(stream));
 
             IActorRef responseStreamer = Context.ActorOf(
-                StreamLines.Create(inFlightRequest.CorrelationId, inFlightRequest.ReplyTo, stream,
-                    encoding: Encoding.ASCII // TODO: Consider getting this from ExecuteCommand via InFlightRequest rather than assuming ALL streamed Docker API responses are ASCII.
-                ),
-                name: $"response-stream-{inFlightRequest.CorrelationId}"
+                DockerEventParser.Create(inFlightRequest.CorrelationId, inFlightRequest.ReplyTo, stream),
+                name: $"event-stream-{inFlightRequest.CorrelationId}"
             );
 
             InFlightRequest streamingRequest = inFlightRequest.WithResponseStreamer(responseStreamer);

@@ -99,9 +99,9 @@ namespace AKDK.Actors
             public bool IsStreamed => ResponseStream != null;
 
             /// <summary>
-            ///     Is the command response in Docker log format?
+            ///     The streamed response format (if streamed).
             /// </summary>
-            public bool IsLog => (ResponseMessage is StreamedResponse streamedResponse) ? streamedResponse.IsLog : false;
+            public StreamedResponseFormat Format => (ResponseMessage is StreamedResponse streamedResponse) ? streamedResponse.Format : StreamedResponseFormat.Unknown;
 
             /// <summary>
             ///     The response message that will be sent to the actor that requested the command be executed.

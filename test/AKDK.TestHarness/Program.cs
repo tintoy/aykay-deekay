@@ -6,8 +6,9 @@ using System.Threading;
 
 namespace AKDK.TestHarness
 {
-    using Actors.Streaming;
     using Messages;
+
+    using DockerEvent = Messages.DockerEvents.DockerEvent;
 
     /// <summary>
     ///     Test harness for AKDK.
@@ -99,14 +100,14 @@ namespace AKDK.TestHarness
                                 Tty = false
                             };
 
-                            // Needed if you want to get logs from the API ("systemd" logger is also supported).
+                            // Needed if you want to get logs from the API ("journald" logger is also supported).
                             createContainerParameters.UseJsonFileLogger();
 
                             client.Tell(
                                 new CreateContainer(createContainerParameters)
                             );
                         });
-                        actor.Receive<ContainerCreated>((containerCreated, context) =>
+                        actor.Receive<Messages.ContainerCreated>((containerCreated, context) =>
                         {
                             // AF: You could use CorrelationId here to match up CreateContainer with ContainerCreated.
 
@@ -152,12 +153,28 @@ namespace AKDK.TestHarness
                             Console.WriteLine("EndOfLog({0})", endOfLog.CorrelationId);
 
                             completed.Set();
+
+                            client.Tell(
+                                new MonitorContainerEvents()
+                            );
+                        });
+                        actor.Receive<DockerEvent>((dockerEvent, context) =>
+                        {
+                            Console.WriteLine("Event({0}): {1} {2}",
+                                dockerEvent.GetType().Name,
+                                dockerEvent.TargetType,
+                                dockerEvent.EventType
+                            );
+                            Console.WriteLine("\t{0}", dockerEvent);
                         });
 
                     }, "docker-user");
                     
                     Console.WriteLine("Running.");
                     completed.WaitOne();
+
+                    Console.WriteLine("Waiting for events...");
+                    Console.ReadLine();
 
                     system.Terminate().Wait();
                 }

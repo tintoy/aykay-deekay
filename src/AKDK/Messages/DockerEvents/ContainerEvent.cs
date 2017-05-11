@@ -5,13 +5,14 @@ namespace AKDK.Messages.DockerEvents
 	/// <summary>
     /// 	Represents an event relating to a container. 
     /// </summary>
-	public abstract class ContainerEvent
+	public class ContainerEvent
 		: DockerEvent
 	{
 		/// <summary>
         ///		Initialise the <see cref="ContainerEvent"/>. 
         /// </summary>
-		protected ContainerEvent()
+		public ContainerEvent(DockerEventType eventType)
+            : base(DockerEventTarget.Container, eventType)
 		{
 		}
 
@@ -26,12 +27,6 @@ namespace AKDK.Messages.DockerEvents
 		/// </summary>
 		[JsonIgnore]
 		public string Image => GetActorAttribute("image");
-		
-		/// <summary>
-        ///		The type of entity (e.g. image, container, etc) that the event relates to. 
-        /// </summary>
-		[JsonProperty("Type")]
-		public sealed override DockerEventTarget TargetType => DockerEventTarget.Container;
 	}
 
 	/// <summary>
@@ -44,14 +39,9 @@ namespace AKDK.Messages.DockerEvents
         ///		Create a new <see cref="ContainerCreated"/> event model. 
         /// </summary>
 		public ContainerCreated()
+            : base(DockerEventType.Create)
 		{
 		}
-
-		/// <summary>
-        /// 	The event type.
-        /// </summary>
-		[JsonProperty("status")]
-		public override DockerEventType EventType => DockerEventType.Create;
 	}
 
 	/// <summary>
@@ -64,13 +54,8 @@ namespace AKDK.Messages.DockerEvents
         ///		Create a new <see cref="ContainerDied"/> event model. 
         /// </summary>
 		public ContainerDied()
+            : base(DockerEventType.Die)
 		{
 		}
-
-		/// <summary>
-        /// 	The event type.
-        /// </summary>
-		[JsonProperty("status")]
-		public override DockerEventType EventType => DockerEventType.Die;
 	}
 }

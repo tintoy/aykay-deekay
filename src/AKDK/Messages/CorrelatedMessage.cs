@@ -10,6 +10,14 @@ namespace AKDK.Messages
         : ICorrelatedMessage
     {
         /// <summary>
+        ///     Generate a message correlation Id.
+        /// </summary>
+        /// <returns>
+        ///     The new message correlation Id.
+        /// </returns>
+        public static string NewCorrelationId() => Guid.NewGuid().ToString("N"); // Just digits, no dashes or braces.
+
+        /// <summary>
         ///		Create a new <see cref="CorrelatedMessage"/>.
         /// </summary>
         /// <param name="correlationId">
@@ -17,7 +25,7 @@ namespace AKDK.Messages
         /// </param>
         protected CorrelatedMessage(string correlationId)
         {
-            CorrelationId = correlationId ?? Guid.NewGuid().ToString("N"); // Just digits, no dashes or braces.
+            CorrelationId = correlationId ?? NewCorrelationId();
         }
 
         /// <summary>

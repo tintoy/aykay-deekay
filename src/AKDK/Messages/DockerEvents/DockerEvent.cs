@@ -11,14 +11,22 @@ namespace AKDK.Messages.DockerEvents
     ///		The base model for Docker event data. 
     /// </summary>
 	[JsonConverter(typeof(Converters.DockerEventConverter))]
-	public abstract class DockerEvent
+	public class DockerEvent
+        : ICorrelatedMessage
 	{
         /// <summary>
         ///     Create a new <see cref="DockerEvent"/>.
         /// </summary>
-		protected DockerEvent()
-		{
+		public DockerEvent(DockerEventTarget targetType, DockerEventType eventType)
+        {
+            TargetType = targetType;
+            EventType = eventType;
 		}
+
+        /// <summary>
+        ///     The message correlation Id.
+        /// </summary>
+        public string CorrelationId { get; internal set; }
 
 		/// <summary>
         /// 	The Id of the entity that the event relates to.
@@ -29,12 +37,14 @@ namespace AKDK.Messages.DockerEvents
 		/// <summary>
         /// 	The type of entity (e.g. image, container, etc) that the event relates to.
         /// </summary>
-		public abstract DockerEventTarget TargetType { get; }
-		
-		/// <summary>
+        [JsonIgnore]
+		public DockerEventTarget TargetType { get; }
+
+        /// <summary>
         /// 	The event type.
         /// </summary>
-		public abstract DockerEventType EventType { get; }
+        [JsonIgnore]
+        public DockerEventType EventType { get; }
 
 		/// <summary>
         /// 	Information about the entity that the event relates to. 
@@ -46,6 +56,7 @@ namespace AKDK.Messages.DockerEvents
         /// 	The UTC date / time that the event was raised.
         /// </summary>
 		[JsonProperty("time")]
+        [JsonConverter(typeof(DockerDateConverter))]
 		public DateTime TimestampUTC { get; set; }
 
 		/// <summary>
@@ -57,7 +68,7 @@ namespace AKDK.Messages.DockerEvents
         /// <returns>
 		/// 	The attribute value (or <c>null</c>, if the attribute is not defined).
 		/// </returns>
-		protected string GetActorAttribute(string name)
+		public string GetActorAttribute(string name)
 		{
 			string value;
 			Actor.Attributes.TryGetValue(name, out value);
@@ -73,8 +84,7 @@ namespace AKDK.Messages.DockerEvents
             Converters =
             {
                 new StringEnumConverter(),
-                new DockerEventConverter(),
-                new DockerDateConverter()
+                new DockerEventConverter()
             }
         };
 
@@ -110,7 +120,7 @@ namespace AKDK.Messages.DockerEvents
 		/// <summary>
         ///		The entity attributes (if any). 
         /// </summary>
-		[JsonProperty("ID", ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+		[JsonProperty("Attributes", ObjectCreationHandling = ObjectCreationHandling.Reuse)]
 		public Dictionary<string, string> Attributes { get; } = new Dictionary<string, string>();
 	}
 }

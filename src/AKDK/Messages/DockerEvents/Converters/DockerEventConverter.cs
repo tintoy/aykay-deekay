@@ -10,13 +10,13 @@ namespace AKDK.Messages.DockerEvents.Converters
         {
 			string eventTargetValue = (string)json.GetValue("Type");
 			DockerEventTarget eventTarget;
-			if (!Enum.TryParse(eventTargetValue, out eventTarget))
+			if (!Enum.TryParse(eventTargetValue, true, out eventTarget))
 				throw new InvalidOperationException($"Unsupported event target ('Type' == '{eventTargetValue}').");
 
-			string eventTypeValue = (string)json.GetValue("Type");
+			string eventTypeValue = (string)json.GetValue("Action");
 			DockerEventType eventType;
-			if (!Enum.TryParse(eventTypeValue, out eventType))
-				throw new InvalidOperationException($"Unsupported event type ('status' == '{eventTypeValue}').");
+			if (!Enum.TryParse(eventTypeValue, true, out eventType))
+				throw new InvalidOperationException($"Unsupported event type ('Action' == '{eventTypeValue}').");
 
 			DockerEvent dockerEvent;
 			switch (eventTarget)
@@ -33,7 +33,13 @@ namespace AKDK.Messages.DockerEvents.Converters
 
 					break;
 				}
-				default:
+                case DockerEventTarget.Network:
+                {
+                    dockerEvent = CreateNetworkEvent(eventType);
+
+                    break;
+                }
+                default:
 				{
 					throw new InvalidOperationException($"Unsupported event target ({eventTarget}).");
 				}
@@ -55,7 +61,7 @@ namespace AKDK.Messages.DockerEvents.Converters
 				}
 				default:
 				{
-					return null;
+					return new ContainerEvent(eventType);
 				}
 			}
 		}
@@ -74,9 +80,28 @@ namespace AKDK.Messages.DockerEvents.Converters
 				}
 				default:
 				{
-					return null;
+					return new ImageEvent(eventType);
 				}
 			}
 		}
+
+        NetworkEvent CreateNetworkEvent(DockerEventType eventType)
+        {
+            switch (eventType)
+            {
+                case DockerEventType.Connect:
+                {
+                    return new NetworkConnected();
+                }
+                case DockerEventType.Push:
+                {
+                    return new NetworkDisconnected();
+                }
+                default:
+                {
+                    return new NetworkEvent(eventType);
+                }
+            }
+        }
     }
 }

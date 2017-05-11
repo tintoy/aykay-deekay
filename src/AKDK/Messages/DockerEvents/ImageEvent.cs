@@ -5,13 +5,14 @@ namespace AKDK.Messages.DockerEvents
 	/// <summary>
 	/// 	Represents an event relating to an image. 
 	/// </summary>
-	public abstract class ImageEvent
+	public class ImageEvent
 		: DockerEvent
 	{
 		/// <summary>
 		///		Initialise the <see cref="ImageEvent"/>. 
 		/// </summary>
-		protected ImageEvent()
+		public ImageEvent(DockerEventType eventType)
+            : base(DockerEventTarget.Image, eventType)
 		{
 		}
 
@@ -26,12 +27,6 @@ namespace AKDK.Messages.DockerEvents
 		/// </summary>
 		[JsonIgnore]
 		public string BaseName => GetActorAttribute("name");
-
-		/// <summary>
-		///		The type of entity (e.g. image, container, etc) that the event relates to. 
-		/// </summary>
-		[JsonProperty("Type")]
-		public override DockerEventTarget TargetType => DockerEventTarget.Image;
 	}
 
 	/// <summary>
@@ -44,13 +39,9 @@ namespace AKDK.Messages.DockerEvents
 		///		Create a new <see cref="ImagePulled"/> event model.
 		/// </summary>
 		public ImagePulled()
+            : base(DockerEventType.Pull)
 		{
 		}
-
-		/// <summary>
-		///		The event type.
-		/// </summary>
-		public sealed override DockerEventType EventType => DockerEventType.Pull;
 	}
 
 	/// <summary>
@@ -63,12 +54,8 @@ namespace AKDK.Messages.DockerEvents
 		///		Create a new <see cref="ImagePulled"/> event model.
 		/// </summary>
 		public ImagePushed()
-		{
+            : base(DockerEventType.Pull)
+        {
 		}
-
-		/// <summary>
-		///		The event type.
-		/// </summary>
-		public override DockerEventType EventType => DockerEventType.Push;
 	}
 }
