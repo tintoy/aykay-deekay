@@ -54,6 +54,7 @@ namespace AKDK.Actors
             _readStreamProps = ReadStream.Create(correlationId, Self, stream, bufferSize);
 
             ByteString buffer = ByteString.Empty;
+            bool isEndOfStream = false;
 
             // Parse as many log entries as we can find in the buffer.
             void LogPump()
@@ -72,6 +73,11 @@ namespace AKDK.Actors
             // We've reached the end of the log; like tears in rain, time to die.
             void EndOfStream()
             {
+                if (isEndOfStream)
+                    return;
+
+                isEndOfStream = true;
+
                 owner.Tell(
                     new EndOfLog(correlationId)
                 );
