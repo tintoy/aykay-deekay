@@ -99,6 +99,8 @@ namespace AKDK.Messages
 			if (data.Count < HeaderLength)
 				return (streamType: DockerLogStreamType.Unknown, length: -1, isValid: false);
 
+            
+
 			byte[] header = data.Slice(0, HeaderLength - 1).ToArray();
 
 			return (

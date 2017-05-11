@@ -9,10 +9,6 @@ namespace AKDK.Actors
 {
     using Messages;
 
-    // TODO: Work out how to deal with response for GetContainerLogs - StreamLine message should somehow be transformed into a more suitable message (e.g. ContainerLogLine).
-    // TODO: Maybe add a StreamLineTransform delegate to the ExecuteCommand message?
-    // TODO: If so, there should be a base class for messages representing a client-level view of streamed response data.
-
     /// <summary>
     ///     Actor that aggregates a <see cref="Connection"/>, providing a public surface for the Docker API.
     /// </summary>
@@ -23,8 +19,9 @@ namespace AKDK.Actors
         ///     Regular expression that matches the Docker log line prefix.
         /// </summary>
         /// <remarks>
-        ///     For details, see <see href="https://github.com/moby/moby/issues/7375#issuecomment-51462963"/>.
+        ///     TODO: Replace use of <see cref="Streaming.StreamLines"/> actor with an actor that understands the Docker log-header format (and associated framing logic).
         /// </remarks>
+        /// <seealso cref="DockerLogEntry"/>
         static readonly Regex MatchLogPrefix = new Regex("[\x00\x01\x02]\x00{6}.{1}");
 
         /// <summary>
@@ -84,6 +81,34 @@ namespace AKDK.Actors
                     IList<ImagesListResponse> images = await dockerClient.Images.ListImagesAsync(listImages.Parameters);
 
                     return new ImageList(listImages.CorrelationId, images);
+                });
+
+                _connection.Tell(executeCommand, Sender);
+            });
+            Receive<CreateContainer>(createContainer =>
+            {
+                Log.Debug("Received CreateContainer request '{0}' from '{1}'.", createContainer.CorrelationId, Sender);
+
+                var executeCommand = new Connection.ExecuteCommand(createContainer, async (dockerClient, cancellationToken) =>
+                {
+                    CreateContainerResponse response = await dockerClient.Containers.CreateContainerAsync(createContainer.Parameters);
+
+                    return new ContainerCreated(createContainer.CorrelationId, response);
+                });
+
+                _connection.Tell(executeCommand, Sender);
+            });
+            Receive<StartContainer>(startContainer =>
+            {
+                Log.Debug("Received StartContainer request '{0}' from '{1}'.", startContainer.CorrelationId, Sender);
+
+                var executeCommand = new Connection.ExecuteCommand(startContainer, async (dockerClient, cancellationToken) =>
+                {
+                    bool containerWasStarted = await dockerClient.Containers.StartContainerAsync(startContainer.ContainerId, startContainer.Parameters);
+
+                    return new ContainerStarted(startContainer.CorrelationId, startContainer.ContainerId,
+                        alreadyStarted: !containerWasStarted
+                    );
                 });
 
                 _connection.Tell(executeCommand, Sender);

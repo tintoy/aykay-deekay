@@ -2,15 +2,13 @@
 using Akka.Actor.Dsl;
 using Docker.DotNet.Models;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace AKDK.TestHarness
 {
     using Actors.Streaming;
-    using Docker.DotNet;
     using Messages;
-    using System.Text.RegularExpressions;
-    using Utilities;
 
     /// <summary>
     ///     Test harness for AKDK.
@@ -40,6 +38,7 @@ namespace AKDK.TestHarness
                 new SynchronizationContext()
             );
 
+            ManualResetEvent completed = new ManualResetEvent(initialState: false);
             try
             {
                 // Match colour for INFO messages from Akka logger.
@@ -49,9 +48,13 @@ namespace AKDK.TestHarness
                 {
                     IActorRef user = system.ActorOf(actor =>
                     {
-                        // TODO: Fully implement ConnectionManager and use that rather than creating connection directly.
-
                         IActorRef client = null;
+
+                        actor.OnPreStart = context =>
+                        {
+                            Console.WriteLine("Connecting...");
+                            context.System.Docker().RequestConnectLocal(context.Self);
+                        };
 
                         actor.Receive<Connected>((connected, context) =>
                         {
@@ -62,6 +65,18 @@ namespace AKDK.TestHarness
                             client.Tell(new ListImages(
                                 new ImagesListParameters { All = true }
                             ));
+                        });
+                        actor.Receive<ConnectFailed>((connectFailed, context) =>
+                        {
+                            Console.WriteLine("Failed to connect. {0}",
+                                connectFailed.Exception.Message
+                            );
+
+                            Thread.Sleep(
+                                TimeSpan.FromSeconds(5)
+                            );
+                            Console.WriteLine("Reconnecting...");
+                            context.System.Docker().RequestConnectLocal(context.Self);
                         });
                         actor.Receive<ImageList>((imageList, context) =>
                         {
@@ -74,7 +89,59 @@ namespace AKDK.TestHarness
                                     Console.WriteLine("\t\t{0}", repoTag);
                             }
 
-                            const string containerId = "b2ebc0e522e3";
+                            const string imageName = "hello-world:latest";
+
+                            Console.WriteLine("Requesting creation of container from image '{0}'...", imageName);
+                            CreateContainerParameters createContainerParameters = new CreateContainerParameters
+                            {
+                                Image = imageName,
+                                HostConfig = new HostConfig
+                                {
+                                    LogConfig = new LogConfig
+                                    {
+                                        Type = "json-file",
+                                        Config = new Dictionary<string, string>()
+                                    }
+                                },
+                                AttachStdout = true,
+                                AttachStderr = true,
+                                Tty = false
+                            };
+                            createContainerParameters.UseJsonFileLogger();
+
+                            client.Tell(
+                                new CreateContainer(createContainerParameters)
+                            );
+                        });
+                        actor.Receive<ContainerCreated>((containerCreated, context) =>
+                        {
+                            // AF: You could use CorrelationId here to match up CreateContainer with ContainerCreated.
+
+                            Console.WriteLine("Container '{0}' created.", containerCreated.ContainerId);
+                            if (containerCreated.Warnings.Count > 0)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                foreach (string warning in containerCreated.ApiResponse.Warnings)
+                                    Console.WriteLine("\t{0}", warning);
+
+                                Console.ForegroundColor = ConsoleColor.White;
+                            }
+
+                            Console.WriteLine("Starting container '{0}'...", containerCreated.ContainerId);
+                            client.Tell(
+                                new StartContainer(containerCreated.ContainerId)
+                            );
+                        });
+                        actor.Receive<ContainerStarted>((containerStarted, context) =>
+                        {
+                            Console.WriteLine("Started container '{0}'.", containerStarted.ContainerId);
+                            Console.WriteLine("Waiting 5 seconds for container process to exit...");
+
+                            Thread.Sleep(
+                                TimeSpan.FromSeconds(5)
+                            );
+
+                            string containerId = containerStarted.ContainerId;
 
                             Console.WriteLine("Asking for logs of container '{0}'...", containerId);
                             client.Tell(new GetContainerLogs(containerId, new ContainerLogsParameters
@@ -90,18 +157,14 @@ namespace AKDK.TestHarness
                         actor.Receive<StreamLines.EndOfStream>((endOfStream, context) =>
                         {
                             Console.WriteLine("{0}: Got end-of-stream.", endOfStream.CorrelationId);
-                        });
 
-                        actor.OnPreStart = context =>
-                        {
-                            Console.WriteLine("Connecting...");
-                            context.System.Docker().RequestConnectLocal(context.Self);
-                        };
+                            completed.Set();
+                        });
 
                     }, "docker-user");
                     
-                    Console.WriteLine("Running (press enter to terminate).");
-                    Console.ReadLine();
+                    Console.WriteLine("Running.");
+                    completed.WaitOne();
 
                     system.Terminate().Wait();
                 }

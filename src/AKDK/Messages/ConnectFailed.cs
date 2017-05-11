@@ -6,11 +6,11 @@ namespace AKDK.Messages
     /// <summary>
     ///     Message indicating a failure to connect to the Docker API.
     /// </summary>
-    public class ConnectionFailure
+    public class ConnectFailed
         : Failure, ICorrelatedMessage
     {
         /// <summary>
-        ///     Create a new <see cref="ConnectionFailure"/> message.
+        ///     Create a new <see cref="ConnectFailed"/> message.
         /// </summary>
         /// <param name="exception">
         ///     The exception that was raised due to connection failure.
@@ -18,7 +18,7 @@ namespace AKDK.Messages
         /// <param name="correlationId">
         ///     The message correlation Id.
         /// </param>
-        public ConnectionFailure(Exception exception, string correlationId)
+        public ConnectFailed(Exception exception, string correlationId)
         {
             if (exception == null)
                 throw new ArgumentNullException(nameof(exception));

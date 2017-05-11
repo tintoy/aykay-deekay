@@ -1,5 +1,6 @@
 using Akka.Actor;
 using Docker.DotNet;
+using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -46,6 +47,14 @@ namespace AKDK.Actors
 
             _client = client;
 
+            Become(Ready);
+        }
+
+        /// <summary>
+        ///     Called when the connection is ready to handle requests.
+        /// </summary>
+        void Ready()
+        {
             Receive<ExecuteCommand>(executeCommand =>
             {
                 Log.Debug("Received ExecuteCommand '{0}' ('{1}') from '{2}'.",
@@ -53,7 +62,6 @@ namespace AKDK.Actors
                     executeCommand.RequestMessage.OperationName,
                     Sender.Path
                 );
-
                 Execute(executeCommand)
                     .PipeTo(Self, sender: Self, failure: exception =>
                     {

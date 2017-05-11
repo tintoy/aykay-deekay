@@ -1,8 +1,11 @@
-using Akka;
 using Akka.Actor;
 using Docker.DotNet;
+using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+
+using Version = System.Version;
 
 namespace AKDK.Actors
 {
@@ -14,6 +17,11 @@ namespace AKDK.Actors
     public class ConnectionManager
         : ReceiveActorEx
     {
+        /// <summary>
+        ///     The minimum supported version of the Docker API.
+        /// </summary>
+        public static readonly Version MinimumDockerApiVersion = new Version("1.24");
+
         /// <summary>
         ///     The Docker connection manager.
         /// </summary>
@@ -44,7 +52,7 @@ namespace AKDK.Actors
         /// </summary>
         public ConnectionManager()
         {
-            Receive<Connect>(connect =>
+            ReceiveAsync<Connect>(async connect =>
             {
                 try
                 {
@@ -54,7 +62,7 @@ namespace AKDK.Actors
                         connect.EndpointUri
                     );
 
-                    IActorRef client = GetOrCreateClient(connect);
+                    IActorRef client = await GetOrCreateClientAsync(connect);
 
                     Sender.Tell(new Connected(client,
                         endpointUri: connect.EndpointUri,
@@ -63,7 +71,7 @@ namespace AKDK.Actors
                 }
                 catch (Exception createClientError)
                 {
-                    Sender.Tell(new ConnectionFailure(
+                    Sender.Tell(new ConnectFailed(
                         exception: createClientError,
                         correlationId: connect.CorrelationId
                     ));
@@ -143,7 +151,7 @@ namespace AKDK.Actors
         /// <returns>
         ///     A reference to the <see cref="Client"/> actor.
         /// </returns>
-        IActorRef GetOrCreateClient(Connect connectRequest)
+        async Task<IActorRef> GetOrCreateClientAsync(Connect connectRequest)
         {
             if (connectRequest == null)
                 throw new ArgumentNullException(nameof(connectRequest));
@@ -156,10 +164,33 @@ namespace AKDK.Actors
             IActorRef clientActor;
             if (!_clientActors.TryGetValue(connectRequest.EndpointUri, out clientActor))
             {
+                IDockerClient dockerClient = clientConfiguration.CreateClient();
+
+                VersionResponse versionInfo;
+                try
+                {
+                    versionInfo = await dockerClient.Miscellaneous.GetVersionAsync();
+                }
+                catch (TimeoutException connectionTimedOut)
+                {
+                    // TODO: More specific exception type.
+
+                    throw new Exception($"Failed to connect to the Docker API at '{connectRequest.EndpointUri}' (connection timed out).",
+                        innerException: connectionTimedOut
+                    );
+                }
+
+                Version apiVersion = new Version(versionInfo.APIVersion);
+
+                if (apiVersion < MinimumDockerApiVersion)
+                    throw new NotSupportedException($"The Docker API at '{connectRequest.EndpointUri}' is v{apiVersion}, but AK/DK only supports v{MinimumDockerApiVersion} or newer.");
+
+                Log.Debug("Successfully connected to Docker API (v{0}) at '{1}'.", apiVersion, connectRequest.EndpointUri);
+
                 clientActor = Context.ActorOf(
-                    Props.Create<Client>(Connection.Create(
-                        clientConfiguration.CreateClient() // TODO: Add constructor overload to inject configuration instead of client; let Client create the DockerClient (except in tests).
-                    )),
+                    Props.Create<Client>(
+                        Connection.Create(dockerClient) // TODO: Add constructor overload to inject configuration instead of client; let Client create the DockerClient (except in tests).
+                    ),
                     name: $"client-{_nextClientId++}"
                 );
                 _clientActors.Add(connectRequest.EndpointUri, clientActor);

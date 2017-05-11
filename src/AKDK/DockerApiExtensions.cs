@@ -51,7 +51,7 @@ namespace AKDK
         /// </param>
         /// <remarks>
         ///     If successful, a reference to the <see cref="Client"/> actor will be delivered via a <see cref="Connected"/> message.
-        ///     Otherwise, a <see cref="ConnectionFailure"/> message will be delivered.
+        ///     Otherwise, a <see cref="ConnectFailed"/> message will be delivered.
         /// </remarks>
 		public static void RequestConnectLocal(this DockerApi dockerApi, IActorRef replyTo = null, string correlationId = null)
         {
