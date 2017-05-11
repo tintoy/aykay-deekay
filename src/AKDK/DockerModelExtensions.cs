@@ -33,7 +33,7 @@ namespace AKDK
         }
 
         /// <summary>
-        ///     Configure the container to use the "json-file" logging driver.
+        ///     Configure the container to use the "journald" logging driver.
         /// </summary>
         /// <param name="parameters">
         ///     The container-creation parameters.
@@ -41,14 +41,14 @@ namespace AKDK
         /// <returns>
         ///     The container-creation parameters (enables method-chaining).
         /// </returns>
-        public static CreateContainerParameters UseSystemdLogger(this CreateContainerParameters parameters)
+        public static CreateContainerParameters UseJournaldLogger(this CreateContainerParameters parameters)
         {
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
 
             HostConfig hostConfig = parameters.HostConfig ?? (parameters.HostConfig = new HostConfig());
             LogConfig logConfig = hostConfig.EnsureLogConfig();
-            logConfig.Type = "systemd";
+            logConfig.Type = "journald";
             logConfig.Config.Clear();
 
             return parameters;
