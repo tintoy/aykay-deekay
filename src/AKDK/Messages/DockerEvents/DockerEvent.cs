@@ -6,11 +6,12 @@ using System.Collections.Generic;
 namespace AKDK.Messages.DockerEvents
 {
     using Converters;
+    using System.IO;
 
-	/// <summary>
+    /// <summary>
     ///		The base model for Docker event data. 
     /// </summary>
-	[JsonConverter(typeof(Converters.DockerEventConverter))]
+    [JsonConverter(typeof(Converters.DockerEventConverter))]
 	public class DockerEvent
         : ICorrelatedMessage
 	{
@@ -87,6 +88,20 @@ namespace AKDK.Messages.DockerEvents
                 new DockerEventConverter()
             }
         };
+
+        /// <summary>
+        ///     Serialise the event to JSON.
+        /// </summary>
+        /// <param name="writer">
+        ///     The <see cref="JsonWriter"/> used to write the serialised event data.
+        /// </param>
+        public void ToJson(JsonWriter writer)
+        {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+
+            JsonSerializer.Create(SerializerSettings).Serialize(writer, this);
+        }
 
         /// <summary>
         ///     Deserialise a docker event from JSON.
