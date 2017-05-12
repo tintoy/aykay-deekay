@@ -70,8 +70,6 @@ namespace AKDK.Actors
 
             Receive<ListImages>(listImages =>
             {
-                Log.Debug("Received ListImages request '{0}' from '{1}'.", listImages.CorrelationId, Sender);
-
                 var executeCommand = new Connection.ExecuteCommand(listImages, async (dockerClient, cancellationToken) =>
                 {
                     IList<ImagesListResponse> images = await dockerClient.Images.ListImagesAsync(listImages.Parameters);
@@ -83,8 +81,6 @@ namespace AKDK.Actors
             });
             Receive<CreateContainer>(createContainer =>
             {
-                Log.Debug("Received CreateContainer request '{0}' from '{1}'.", createContainer.CorrelationId, Sender);
-
                 var executeCommand = new Connection.ExecuteCommand(createContainer, async (dockerClient, cancellationToken) =>
                 {
                     CreateContainerResponse response = await dockerClient.Containers.CreateContainerAsync(createContainer.Parameters);
@@ -96,14 +92,25 @@ namespace AKDK.Actors
             });
             Receive<StartContainer>(startContainer =>
             {
-                Log.Debug("Received StartContainer request '{0}' from '{1}'.", startContainer.CorrelationId, Sender);
-
                 var executeCommand = new Connection.ExecuteCommand(startContainer, async (dockerClient, cancellationToken) =>
                 {
                     bool containerWasStarted = await dockerClient.Containers.StartContainerAsync(startContainer.ContainerId, startContainer.Parameters);
 
                     return new ContainerStarted(startContainer.CorrelationId, startContainer.ContainerId,
                         alreadyStarted: !containerWasStarted
+                    );
+                });
+
+                _connection.Tell(executeCommand, Sender);
+            });
+            Receive<RemoveContainer>(removeContainer =>
+            {
+                var executeCommand = new Connection.ExecuteCommand(removeContainer, async (dockerClient, cancellationToken) =>
+                {
+                    await dockerClient.Containers.RemoveContainerAsync(removeContainer.ContainerId, removeContainer.Parameters);
+
+                    return new ContainerRemoved(removeContainer.CorrelationId,
+                        removeContainer.ContainerId
                     );
                 });
 

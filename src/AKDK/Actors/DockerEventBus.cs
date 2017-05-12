@@ -36,6 +36,11 @@ namespace AKDK.Actors
         readonly IActorRef _client;
 
         /// <summary>
+        ///     Is the <see cref="Client"/> used to monitor events still alive?
+        /// </summary>
+        bool _isClientAlive;
+
+        /// <summary>
         ///     Create a new <see cref="DockerEventBus"/> actor.
         /// </summary>
         /// <param name="client">
@@ -47,6 +52,19 @@ namespace AKDK.Actors
                 throw new ArgumentNullException(nameof(client));
 
             _client = client;
+            _isClientAlive = true;
+
+            Receive<Terminated>(terminated =>
+            {
+                if (terminated.ActorRef == client)
+                {
+                    _isClientAlive = false;
+
+                    Context.Stop(Self); // TODO: Is this actually the behaviour we're after?
+                }
+                else
+                    Unhandled(terminated); // Results in DeathPactException
+            });
         }
 
         /// <summary>
@@ -61,6 +79,8 @@ namespace AKDK.Actors
         {
             base.PreStart();
 
+            Context.Watch(_client);
+
             // Start receiving events.
             _client.Tell(
                 new MonitorContainerEvents(correlationId: _monitorEventsCorrelationId)
@@ -74,10 +94,13 @@ namespace AKDK.Actors
         {
             base.PostStop();
 
-            // Stop receiving events.
-            _client.Tell(
-                new CancelRequest(correlationId: _monitorEventsCorrelationId)
-            );
+            if (_isClientAlive)
+            {
+                // Stop receiving events.
+                _client.Tell(
+                    new CancelRequest(correlationId: _monitorEventsCorrelationId)
+                );
+            }
         }
 
         /// <summary>

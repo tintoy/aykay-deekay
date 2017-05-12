@@ -49,6 +49,7 @@ namespace AKDK.TestHarness
                     IActorRef user = system.ActorOf(actor =>
                     {
                         IActorRef client = null;
+                        string containerId = null;
 
                         actor.OnPreStart = context =>
                         {
@@ -124,11 +125,12 @@ namespace AKDK.TestHarness
                                 new CreateContainer(createContainerParameters)
                             );
                         });
-                        actor.Receive<Messages.ContainerCreated>((containerCreated, context) =>
+                        actor.Receive<ContainerCreated>((containerCreated, context) =>
                         {
                             // AF: You could use CorrelationId here to match up CreateContainer with ContainerCreated.
 
                             Console.WriteLine("Container '{0}' created.", containerCreated.ContainerId);
+                            containerId = containerCreated.ContainerId;
                             if (containerCreated.Warnings.Count > 0)
                             {
                                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -146,8 +148,6 @@ namespace AKDK.TestHarness
                         actor.Receive<ContainerStarted>((containerStarted, context) =>
                         {
                             Console.WriteLine("Started container '{0}'.", containerStarted.ContainerId);
-                            
-                            string containerId = containerStarted.ContainerId;
 
                             Console.WriteLine("Asking for logs of container '{0}'...", containerId);
                             client.Tell(new GetContainerLogs(containerId, new ContainerLogsParameters
@@ -156,6 +156,8 @@ namespace AKDK.TestHarness
                                 ShowStdout = true,
                                 Follow = true // Continue to stream logs until container exits.
                             }));
+
+                            // TODO: Implement WaitForContainer.
                         });
                         actor.Receive<DockerLogEntry>((logEntry, context) =>
                         {
@@ -168,6 +170,15 @@ namespace AKDK.TestHarness
                         actor.Receive<EndOfLog>((endOfLog, context) =>
                         {
                             Console.WriteLine("EndOfLog({0})", endOfLog.CorrelationId);
+
+                            // AKA container died.
+                            client.Tell(
+                                new RemoveContainer(containerId)
+                            );
+                        });
+                        actor.Receive<ContainerRemoved>((containerRemoved, context) =>
+                        {
+                            Console.WriteLine("Removed container '{0}'.", containerId);
 
                             completed.Set();
                         });

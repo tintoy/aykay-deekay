@@ -30,6 +30,16 @@ namespace AKDK.Actors
         readonly Dictionary<IActorRef, InFlightRequest> _responseStreamers = new Dictionary<IActorRef, InFlightRequest>();
 
         /// <summary>
+        ///		Outstanding requests by log stream owner.
+        /// </summary>
+        readonly Dictionary<IActorRef, InFlightRequest> _logStreamOwners = new Dictionary<IActorRef, InFlightRequest>();
+
+        /// <summary>
+        ///		Outstanding requests by event stream owner.
+        /// </summary>
+        readonly Dictionary<IActorRef, InFlightRequest> _eventStreamOwners = new Dictionary<IActorRef, InFlightRequest>();
+
+        /// <summary>
         ///     The underlying docker API client for the current connection.
         /// </summary>
         IDockerClient _client;
@@ -190,7 +200,7 @@ namespace AKDK.Actors
                     cancelRequest.CorrelationId,
                     inFlightRequest.ReplyTo
                 );
-                inFlightRequest.Cancel();
+                CancelRequest(inFlightRequest);
 
                 if (inFlightRequest.ResponseStreamer != null)
                 {
@@ -203,25 +213,53 @@ namespace AKDK.Actors
                     _responseStreamers.Remove(inFlightRequest.ResponseStreamer);
                 }
 
-                _inFlightRequests.Remove(cancelRequest.CorrelationId);
+                _logStreamOwners.Remove(inFlightRequest.ReplyTo);
+                _eventStreamOwners.Remove(inFlightRequest.ReplyTo);
             });
             Receive<Terminated>(terminated =>
             {
                 InFlightRequest streamingRequest;
-                if (!_responseStreamers.TryGetValue(terminated.ActorRef, out streamingRequest))
+                if (_responseStreamers.TryGetValue(terminated.ActorRef, out streamingRequest))
                 {
+                    Log.Debug("Response streamer for request '{0}' ('{1}') has terminated.",
+                        streamingRequest.CorrelationId,
+                        terminated.ActorRef.Path
+                    );
+
+                    _responseStreamers.Remove(streamingRequest.ResponseStreamer);
+                }
+                else if (_logStreamOwners.TryGetValue(terminated.ActorRef, out streamingRequest))
+                {
+                    Log.Debug("Log stream owner '{0}' for request '{1}' ('{1}') has terminated.",
+                        streamingRequest.ReplyTo,
+                        streamingRequest.CorrelationId,
+                        terminated.ActorRef.Path
+                    );
+
+                    _logStreamOwners.Remove(streamingRequest.ReplyTo);
+                }
+                else if (_eventStreamOwners.TryGetValue(terminated.ActorRef, out streamingRequest))
+                {
+                    Log.Debug("Event stream owner '{0}' for request '{1}' ('{1}') has terminated.",
+                        streamingRequest.ReplyTo,
+                        streamingRequest.CorrelationId,
+                        terminated.ActorRef.Path
+                    );
+
+                    _eventStreamOwners.Remove(terminated.ActorRef);
+                }
+                else
+                {
+                    Log.Debug("Unexpected actor termination: '{0}'.",
+                        terminated.ActorRef
+                    );
+
                     Unhandled(terminated); // Will cause a DeathPactException.
 
                     return;
                 }
 
-                Log.Debug("Response streamer for request '{0}' ('{1}') has terminated.",
-                    streamingRequest.CorrelationId,
-                    terminated.ActorRef.Path
-                );
-
-                _inFlightRequests.Remove(streamingRequest.CorrelationId);
-                _responseStreamers.Remove(streamingRequest.ResponseStreamer);
+                CancelRequest(streamingRequest);
             });
             ReceiveSingleton<Close>(() =>
             {
@@ -325,8 +363,10 @@ namespace AKDK.Actors
 
             _inFlightRequests[streamingRequest.CorrelationId] = streamingRequest;
             _responseStreamers.Add(responseStreamer, streamingRequest);
+            _eventStreamOwners.Add(inFlightRequest.ReplyTo, inFlightRequest);
 
             Context.Watch(responseStreamer);
+            Context.Watch(inFlightRequest.ReplyTo);
 
             return responseStreamer;
         }
@@ -360,10 +400,27 @@ namespace AKDK.Actors
 
             _inFlightRequests[streamingRequest.CorrelationId] = streamingRequest;
             _responseStreamers.Add(responseStreamer, streamingRequest);
+            _logStreamOwners.Add(inFlightRequest.ReplyTo, inFlightRequest);
 
             Context.Watch(responseStreamer);
+            Context.Watch(inFlightRequest.ReplyTo);
 
             return responseStreamer;
+        }
+
+        /// <summary>
+        ///     Cancel an in-flight request.
+        /// </summary>
+        /// <param name="inFlightRequest">
+        /// </param>
+        void CancelRequest(InFlightRequest inFlightRequest)
+        {
+            if (inFlightRequest == null)
+                throw new ArgumentNullException(nameof(inFlightRequest));
+
+            inFlightRequest.Cancel();
+            Context.Unwatch(inFlightRequest.ReplyTo);
+            _inFlightRequests.Remove(inFlightRequest.CorrelationId);
         }
 
         /// <summary>

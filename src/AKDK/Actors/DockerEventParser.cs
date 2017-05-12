@@ -16,9 +16,14 @@ namespace AKDK.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The actor that owns the <see cref="DockerEventParser"/> actor (this actor will receive the stream data).
+        /// </summary>
+        readonly IActorRef _owner;
+
+        /// <summary>
         ///		<see cref="Props"/> used to create the <see cref="ReadStream"/> actor for reading from the underlying stream.
         /// </summary>
-        Props               _readStreamProps;
+        Props               _streamLinesProps;
 
         /// <summary>
         ///		The <see cref="StreamLines"/> actor used to read from the underlying stream.
@@ -51,22 +56,33 @@ namespace AKDK.Actors
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
 
-            _readStreamProps = StreamLines.Create(correlationId, Self, stream, Encoding.ASCII, bufferSize);
+            _owner = owner;
+            _streamLinesProps = StreamLines.Create(correlationId, Self, stream, Encoding.ASCII, bufferSize);
 
             Receive<StreamLines.StreamLine>(streamLine =>
             {
                 var parsedEvent = DockerEvent.FromJson(streamLine.Line);
 
-                owner.Tell(parsedEvent);
+                _owner.Tell(parsedEvent);
             });
             Receive<ReadStream.StreamError>(error =>
             {
-                owner.Tell(error);
+                _owner.Tell(error);
             });
             Receive<Terminated>(terminated =>
             {
-                if (terminated.ActorRef == _streamLines)
+                if (terminated.ActorRef.Equals(_owner))
+                {
+                    Log.Debug("Owner '{0}' terminated.", _owner);
+
                     Context.Stop(Self);
+                }
+                else if (terminated.ActorRef.Equals(_streamLines))
+                {
+                    Log.Debug("Streamer '{0}' terminated.", _streamLines);
+
+                    Context.Stop(Self);
+                }
                 else
                     Unhandled(terminated);
             });
@@ -79,9 +95,9 @@ namespace AKDK.Actors
         {
             base.PreStart();
 
-            _streamLines = Context.ActorOf(_readStreamProps, "read-stream");
+            _streamLines = Context.ActorOf(_streamLinesProps, StreamLines.ActorName);
 
-            // Raise end-of-stream if source actor dies.
+            Context.Watch(_owner);
             Context.Watch(_streamLines);
         }
 

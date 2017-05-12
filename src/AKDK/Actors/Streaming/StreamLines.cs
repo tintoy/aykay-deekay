@@ -19,6 +19,11 @@ namespace AKDK.Actors.Streaming
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The default name for instances of the <see cref="StreamLines"/> actor.
+        /// </summary>
+        public static readonly string ActorName = "stream-lines";
+
+        /// <summary>
         ///		The bytes representing a Windows-style line terminator.
         /// </summary>
         static readonly string WindowsNewLine = "\r\n";
