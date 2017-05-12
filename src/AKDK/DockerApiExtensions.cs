@@ -29,7 +29,7 @@ namespace AKDK
             if (dockerApi == null)
                 throw new ArgumentNullException(nameof(dockerApi));
 
-            Connected connected = await dockerApi.ConnectionManager.Ask<Connected>(
+            Connected connected = await dockerApi.Manager.Ask<Connected>(
                 message: Connect.Local(),
                 timeout: connectTimeout ?? TimeSpan.FromSeconds(30)
             );
@@ -62,7 +62,7 @@ namespace AKDK
             if (replyTo.IsNobody())
                 throw new InvalidOperationException("Cannot determine the actor to receive the reply.");
 
-            dockerApi.ConnectionManager.Tell(
+            dockerApi.Manager.Tell(
                 Connect.Local(correlationId),
                 sender: replyTo
             );
@@ -91,7 +91,7 @@ namespace AKDK
             if (dockerApi == null)
                 throw new ArgumentNullException(nameof(dockerApi));
 
-            Connected connected = await dockerApi.ConnectionManager.Ask<Connected>(
+            Connected connected = await dockerApi.Manager.Ask<Connected>(
                 message: Connect.Tcp(hostName, port),
                 timeout: connectTimeout ?? TimeSpan.FromSeconds(30)
             );
@@ -129,7 +129,7 @@ namespace AKDK
             if (replyTo.IsNobody())
                 throw new InvalidOperationException("Cannot determine the actor to receive the reply.");
 
-            dockerApi.ConnectionManager.Tell(
+            dockerApi.Manager.Tell(
                 Connect.Local(correlationId),
                 sender: replyTo
             );

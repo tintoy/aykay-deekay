@@ -16,15 +16,6 @@ namespace AKDK.Actors
         : ReceiveActorEx
     {
         /// <summary>
-        ///     Regular expression that matches the Docker log line prefix.
-        /// </summary>
-        /// <remarks>
-        ///     TODO: Replace use of <see cref="Streaming.StreamLines"/> actor with an actor that understands the Docker log-header format (and associated framing logic).
-        /// </remarks>
-        /// <seealso cref="DockerLogEntry"/>
-        static readonly Regex MatchLogPrefix = new Regex("[\x00\x01\x02]\x00{6}.{1}");
-
-        /// <summary>
         ///     <see cref="Props"/> that can be used to create the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
         /// </summary>
         readonly Props  _connectionProps;
@@ -33,6 +24,11 @@ namespace AKDK.Actors
         ///     A reference to the <see cref="Connection"/> actor used to execute <see cref="Connection.Command"/>s.
         /// </summary>
         IActorRef       _connection;
+
+        /// <summary>
+        ///     A reference to the <see cref="DockerEventBus"/> actor used for pub/sub of streamed Docker events.
+        /// </summary>
+        IActorRef       _dockerEventBus;
 
         /// <summary>
         ///     Create a new <see cref="Client"/> actor.
@@ -147,6 +143,25 @@ namespace AKDK.Actors
             {
                 _connection.Forward(cancelRequest);
             });
+            Receive<EventBusActor.Subscribe>(subscribeToDockerEvents =>
+            {
+                if (_dockerEventBus == null)
+                {
+                    _dockerEventBus = Context.ActorOf(
+                        DockerEventBus.Create(Self),
+                        name: DockerEventBus.ActorName
+                    );
+                }
+
+                _dockerEventBus.Forward(subscribeToDockerEvents);
+            });
+            Receive<EventBusActor.Unsubscribe>(unsubscribeFromDockerEvents =>
+            {
+                if (_dockerEventBus == null)
+                    return;
+
+                _dockerEventBus.Forward(unsubscribeFromDockerEvents);
+            });
         }
 
         /// <summary>
@@ -162,20 +177,6 @@ namespace AKDK.Actors
             Context.Watch(_connection);
 
             Become(Ready);
-        }
-
-        /// <summary>
-        ///     Strip the Docker log line prefix.
-        /// </summary>
-        /// <param name="logLine">
-        ///     The docker log line.
-        /// </param>
-        /// <returns>
-        ///     The line without the prefix.
-        /// </returns>
-        static string StripLogPrefix(string logLine)
-        {
-            return MatchLogPrefix.Replace(logLine, String.Empty);
         }
     }
 }

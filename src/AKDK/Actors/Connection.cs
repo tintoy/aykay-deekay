@@ -194,8 +194,13 @@ namespace AKDK.Actors
 
                 if (inFlightRequest.ResponseStreamer != null)
                 {
-                    _responseStreamers.Remove(inFlightRequest.ResponseStreamer);
                     Context.Unwatch(inFlightRequest.ResponseStreamer);
+
+                    inFlightRequest.ResponseStreamer.Tell(new ReadStream.Close(
+                        correlationId: cancelRequest.CorrelationId
+                    ));
+
+                    _responseStreamers.Remove(inFlightRequest.ResponseStreamer);
                 }
 
                 _inFlightRequests.Remove(cancelRequest.CorrelationId);

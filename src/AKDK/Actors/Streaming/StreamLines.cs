@@ -83,7 +83,8 @@ namespace AKDK.Actors.Streaming
             Receive<ReadStream.StreamData>(streamData =>
             {
                 int lineEndingIndex;
-                if (streamData.IsEndOfStream)
+                isEndOfStream = streamData.IsEndOfStream;
+                if (isEndOfStream)
                 {
                     // If we still have data remaining, publish it as the final line.
                     if (buffer.Count > 0)
@@ -130,12 +131,20 @@ namespace AKDK.Actors.Streaming
             {
                 owner.Tell(error);
             });
+            Receive<ReadStream.Close>(close =>
+            {
+                _readStream.Forward(close);
+            });
             Receive<Terminated>(terminated =>
             {
-                if (terminated.ActorRef == owner)
+                if (terminated.ActorRef == _readStream)
                 {
-                    if (isEndOfStream)
-                        return;
+                    if (!isEndOfStream)
+                    {
+                        owner.Tell(
+                            new EndOfStream(correlationId)
+                        );
+                    }
                 }
                 else
                     Unhandled(terminated);

@@ -14,6 +14,11 @@ namespace AKDK.Actors
         : EventBusActor<DockerEvent>
     {
         /// <summary>
+        ///     The well-known name for the Docker event bus actor.
+        /// </summary>
+        public static readonly string ActorName = "event-bus";
+
+        /// <summary>
         ///     All Docker event types.
         /// </summary>
         static readonly ImmutableList<Type> AllDockerEventTypes = ImmutableList.CreateRange(
@@ -72,6 +77,25 @@ namespace AKDK.Actors
             // Stop receiving events.
             _client.Tell(
                 new CancelRequest(correlationId: _monitorEventsCorrelationId)
+            );
+        }
+
+        /// <summary>
+        ///     Generate <see cref="Props"/> to create a new <see cref="DockerEventBus"/> actor.
+        /// </summary>
+        /// <param name="client">
+        ///     A reference to the <see cref="Client"/> actor used to monitor events.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="Props"/>.
+        /// </returns>
+        public static Props Create(IActorRef client)
+        {
+            if (client == null)
+                throw new ArgumentNullException(nameof(client));
+
+            return Props.Create(
+                () => new DockerEventBus(client)
             );
         }
     }

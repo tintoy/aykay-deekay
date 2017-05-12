@@ -61,10 +61,10 @@ namespace AKDK.TestHarness
                             Console.WriteLine("Connected.");
                             client = connected.Client;
 
-                            Console.WriteLine("Requesting image list...");
-                            client.Tell(new ListImages(
-                                new ImagesListParameters { All = true }
-                            ));
+                            Console.WriteLine("Subscribing to Docker event bus...");
+                            client.Tell(
+                                new Actors.EventBusActor.Subscribe(context.Self)
+                            );
                         });
                         actor.Receive<ConnectFailed>((connectFailed, context) =>
                         {
@@ -77,6 +77,23 @@ namespace AKDK.TestHarness
                             );
                             Console.WriteLine("Reconnecting...");
                             context.System.Docker().RequestConnectLocal(context.Self);
+                        });
+                        actor.Receive<Actors.EventBusActor.Subscribed>((subscribed, context) =>
+                        {
+                            Console.WriteLine("Subscribed to Docker event bus.");
+
+                            Console.WriteLine("Requesting image list...");
+                            client.Tell(new ListImages(
+                                new ImagesListParameters { All = true }
+                            ));
+                        });
+                        actor.Receive<DockerEvent>((dockerEvent, context) =>
+                        {
+                            Console.WriteLine("Event({0}): {1} {2}",
+                                dockerEvent.GetType().Name,
+                                dockerEvent.TargetType,
+                                dockerEvent.EventType
+                            );
                         });
                         actor.Receive<ImageList>((imageList, context) =>
                         {
@@ -153,28 +170,12 @@ namespace AKDK.TestHarness
                             Console.WriteLine("EndOfLog({0})", endOfLog.CorrelationId);
 
                             completed.Set();
-
-                            client.Tell(
-                                new MonitorContainerEvents()
-                            );
-                        });
-                        actor.Receive<DockerEvent>((dockerEvent, context) =>
-                        {
-                            Console.WriteLine("Event({0}): {1} {2}",
-                                dockerEvent.GetType().Name,
-                                dockerEvent.TargetType,
-                                dockerEvent.EventType
-                            );
-                            Console.WriteLine("\t{0}", dockerEvent);
                         });
 
                     }, "docker-user");
                     
                     Console.WriteLine("Running.");
                     completed.WaitOne();
-
-                    Console.WriteLine("Waiting for events...");
-                    Console.ReadLine();
 
                     system.Terminate().Wait();
                 }

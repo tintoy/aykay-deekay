@@ -41,6 +41,5 @@ namespace AKDK
 
             return context.System.Docker();
         }
-
     }
 }

@@ -88,6 +88,12 @@ namespace AKDK.Actors.Streaming
             _buffer = new byte[bufferSize];
             _closeStream = closeStream;
 
+            Receive<Close>(close =>
+            {
+                _owner.Tell(EndOfStream);
+
+                Context.Stop(Self);
+            });
             Receive<StreamData>(streamData =>
             {
                 _owner.Tell(streamData);
@@ -135,7 +141,19 @@ namespace AKDK.Actors.Streaming
             if (_stream.CanSeek && _stream.Position >= _stream.Length)
                 return EndOfStream;
 
-            int bytesRead = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
+            int bytesRead;
+
+            try
+            {
+                bytesRead = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
+            }
+            catch (OperationCanceledException)
+            {
+                Log.Debug("ReadStream '{0}' has been canceled.", Self);
+
+                return EndOfStream;
+            }
+
             if (bytesRead == 0)
                 return EndOfStream;
 
@@ -167,6 +185,22 @@ namespace AKDK.Actors.Streaming
             return Props.Create(
                 () => new ReadStream(correlationId, owner, stream, bufferSize, closeStream)
             );
+        }
+
+        /// <summary>
+        ///     Request to close the stream.
+        /// </summary>
+        public class Close
+            : CorrelatedMessage
+        {
+            /// <summary>
+            ///     Create a new <see cref="Close"/> message.
+            /// </summary>
+            /// <param name="correlationId"></param>
+            public Close(string correlationId = null)
+                : base(correlationId)
+            {
+            }
         }
 
         /// <summary>

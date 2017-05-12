@@ -27,7 +27,7 @@ namespace AKDK
                 throw new ArgumentNullException(nameof(manager));
 
             System = system;
-            ConnectionManager = manager;
+            Manager = manager;
         }
 
         /// <summary>
@@ -37,9 +37,9 @@ namespace AKDK
         public ActorSystem System { get; }
 
         /// <summary>
-        ///		A reference to the Docker connection-management actor.
+        ///		A reference to the root Docker management actor.
         /// </summary>
 
-        internal IActorRef ConnectionManager { get; }
+        internal IActorRef Manager { get; }
     }
 }
