@@ -1,12 +1,62 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using Newtonsoft.Json.Linq;
 
 namespace AKDK.Messages.DockerEvents.Converters
 {
+    /// <summary>
+    ///     JSON converter for <see cref="DockerEvent"/>s.
+    /// </summary>
 	class DockerEventConverter
         : JsonCreationConverter<DockerEvent>
     {
-        protected override DockerEvent Create(Type objectType, JObject json)
+        /// <summary>
+        ///     Well-known image event types that have corresponding sub-types of <see cref="ImageEvent"/>.
+        /// </summary>
+        /// <remarks>
+        ///     All other image events are deserialised as <see cref="ImageEvent"/>.
+        /// </remarks>
+        public static readonly ImmutableDictionary<DockerEventType, Type> ImageEventTypes = ImmutableDictionary.CreateRange(new Dictionary<DockerEventType, Type>
+        {
+            [DockerEventType.Pull] = typeof(ImagePulled),
+            [DockerEventType.Push] = typeof(ImagePushed)
+        });
+
+        /// <summary>
+        ///     Well-known container event types that have corresponding sub-types of <see cref="ContainerEvent"/>.
+        /// </summary>
+        /// <remarks>
+        ///     All other container events are deserialised as <see cref="ContainerEvent"/>.
+        /// </remarks>
+        public static readonly ImmutableDictionary<DockerEventType, Type> ContainerEventTypes = ImmutableDictionary.CreateRange(new Dictionary<DockerEventType, Type>
+        {
+            [DockerEventType.Create] = typeof(ContainerCreated),
+            [DockerEventType.Die] = typeof(ContainerDied)
+        });
+
+        /// <summary>
+        ///     Well-known network event types that have corresponding sub-types of <see cref="NetworkEvent"/>.
+        /// </summary>
+        /// <remarks>
+        ///     All other network events are deserialised as <see cref="NetworkEvent"/>.
+        /// </remarks>
+        public static readonly ImmutableDictionary<DockerEventType, Type> NetworkEventTypes = ImmutableDictionary.CreateRange(new Dictionary<DockerEventType, Type>
+        {
+            [DockerEventType.Connect] = typeof(NetworkConnected),
+            [DockerEventType.Disconnect] = typeof(NetworkDisconnected)
+        });
+
+        /// <summary>
+        ///     Create a <see cref="DockerEvent"/> to be populated from serialised data.
+        /// </summary>
+        /// <param name="json">
+        ///     The JSON being deserialised.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="DockerEvent"/>.
+        /// </returns>
+        protected override DockerEvent Create(JObject json)
         {
 			string eventTargetValue = (string)json.GetValue("Type");
 			DockerEventTarget eventTarget;
@@ -51,57 +101,55 @@ namespace AKDK.Messages.DockerEvents.Converters
             return dockerEvent;
         }
 
+        /// <summary>
+        ///     Create a <see cref="ContainerEvent"/> to be populated from serialised data.
+        /// </summary>
+        /// <param name="eventType">
+        ///     The type of container event represented by the serialised data.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="ContainerEvent"/>.
+        /// </returns>
 		ContainerEvent CreateContainerEvent(DockerEventType eventType)
 		{
-			switch (eventType)
-			{
-				case DockerEventType.Create:
-				{
-					return new ContainerCreated();
-				}
-				default:
-				{
-					return new ContainerEvent(eventType);
-				}
-			}
-		}
+            if (NetworkEventTypes.TryGetValue(eventType, out Type type))
+                return (ContainerEvent)Activator.CreateInstance(type);
 
+            return (ContainerEvent)Activator.CreateInstance(typeof(ContainerEvent), eventType);
+        }
+
+        /// <summary>
+        ///     Create a <see cref="ImageEvent"/> to be populated from serialised data.
+        /// </summary>
+        /// <param name="eventType">
+        ///     The type of container event represented by the serialised data.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="ImageEvent"/>.
+        /// </returns>
 		ImageEvent CreateImageEvent(DockerEventType eventType)
 		{
-			switch (eventType)
-			{
-				case DockerEventType.Pull:
-				{
-					return new ImagePulled();
-				}
-				case DockerEventType.Push:
-				{
-					return new ImagePushed();
-				}
-				default:
-				{
-					return new ImageEvent(eventType);
-				}
-			}
-		}
+            if (ImageEventTypes.TryGetValue(eventType, out Type type))
+                return (ImageEvent)Activator.CreateInstance(type);
 
+            return (ImageEvent)Activator.CreateInstance(typeof(ImageEvent), eventType);
+        }
+
+        /// <summary>
+        ///     Create a <see cref="NetworkEvent"/> to be populated from serialised data.
+        /// </summary>
+        /// <param name="eventType">
+        ///     The type of container event represented by the serialised data.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="NetworkEvent"/>.
+        /// </returns>
         NetworkEvent CreateNetworkEvent(DockerEventType eventType)
         {
-            switch (eventType)
-            {
-                case DockerEventType.Connect:
-                {
-                    return new NetworkConnected();
-                }
-                case DockerEventType.Disconnect:
-                {
-                    return new NetworkDisconnected();
-                }
-                default:
-                {
-                    return new NetworkEvent(eventType);
-                }
-            }
+            if (NetworkEventTypes.TryGetValue(eventType, out Type type))
+                return (NetworkEvent)Activator.CreateInstance(type);
+
+            return (NetworkEvent)Activator.CreateInstance(typeof(NetworkEvent), eventType);
         }
     }
 }

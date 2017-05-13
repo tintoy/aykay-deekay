@@ -63,7 +63,7 @@ namespace AKDK.Messages.DockerEvents.Converters
 		///		The calling serializer.
 		/// </param>
 		/// <returns>
-		/// The object value.
+		///     The deserialised object.
 		/// </returns>
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
@@ -91,7 +91,7 @@ namespace AKDK.Messages.DockerEvents.Converters
 			}
 
 			JObject json = JObject.Load(reader);
-			TBase target = Create(objectType, json);
+			TBase target = Create(json);
 			if (target == null)
 				throw new InvalidOperationException("JsonCreationConverter.Create returned null.");
 
@@ -130,15 +130,12 @@ namespace AKDK.Messages.DockerEvents.Converters
 		/// <summary>
 		///		Create an instance of to be populated, based properties in the JSON.
 		/// </summary>
-		/// <param name="objectType">
-		///		type of object expected.
-		/// </param>
 		/// <param name="json">
 		///		The JSON containing serialised object data.
 		/// </param>
 		/// <returns>
 		///		The object instance to be populated.
 		/// </returns>
-		protected abstract TBase Create(Type objectType, JObject json);
+		protected abstract TBase Create(JObject json);
 	}
 }
