@@ -16,6 +16,11 @@ namespace AKDK.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The default name for instances of the <see cref="DockerEventParser"/> actor.
+        /// </summary>
+        public static readonly string ActorName = "event-parser";
+
+        /// <summary>
         ///     The actor that owns the <see cref="DockerEventParser"/> actor (this actor will receive the stream data).
         /// </summary>
         readonly IActorRef _owner;
@@ -61,7 +66,7 @@ namespace AKDK.Actors
 
             Receive<StreamLines.StreamLine>(streamLine =>
             {
-                var parsedEvent = DockerEvent.FromJson(streamLine.Line);
+                var parsedEvent = DockerEvent.FromJson(streamLine.Line, correlationId);
 
                 _owner.Tell(parsedEvent);
             });

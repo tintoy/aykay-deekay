@@ -207,7 +207,41 @@ namespace AKDK.Actors
             if (evt == null)
                 throw new ArgumentNullException(nameof(evt));
 
+            if (!OnPublishingEvent(evt))
+                return;
+
             Bus.Publish(evt);
+
+            OnPublishedEvent(evt);
+        }
+
+        /// <summary>
+        ///     Called before an event is published.
+        /// </summary>
+        /// <param name="evt">
+        ///     The event being published.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the event should be published; otherwise, <c>false</c>.
+        /// </returns>
+        protected virtual bool OnPublishingEvent(TEvent evt)
+        {
+            if (evt == null)
+                throw new ArgumentNullException(nameof(evt));
+
+            return true;
+        }
+
+        /// <summary>
+        ///     Called after an event is published.
+        /// </summary>
+        /// <param name="evt">
+        ///     The event that was published.
+        /// </param>
+        protected virtual void OnPublishedEvent(TEvent evt)
+        {
+            if (evt == null)
+                throw new ArgumentNullException(nameof(evt));
         }
 
         /// <summary>
@@ -223,6 +257,26 @@ namespace AKDK.Actors
         {
             foreach (Type eventType in eventTypes)
                 Bus.Subscribe(subscriber, eventType);
+
+            OnAddedSubscriber(subscriber, eventTypes);
+        }
+
+        /// <summary>
+        ///     Called when an actor has been subscribed to the specified event types.
+        /// </summary>
+        /// <param name="subscriber">
+        ///     The actor that was subscribed.
+        /// </param>
+        /// <param name="eventTypes">
+        ///     The types of event messages to which the actor was subscribed.
+        /// </param>
+        protected virtual void OnAddedSubscriber(IActorRef subscriber, IEnumerable<Type> eventTypes)
+        {
+            if (subscriber == null)
+                throw new ArgumentNullException(nameof(subscriber));
+
+            if (eventTypes == null)
+                throw new ArgumentNullException(nameof(eventTypes));
         }
 
         /// <summary>
@@ -238,6 +292,26 @@ namespace AKDK.Actors
         {
             foreach (Type messageType in eventTypes)
                 Bus.Unsubscribe(subscriber, messageType);
+
+            OnRemovedSubscriber(subscriber, eventTypes);
+        }
+
+        /// <summary>
+        ///     Called when an actor has been unsubscribed from the specified event types.
+        /// </summary>
+        /// <param name="subscriber">
+        ///     The actor that was unsubscribed.
+        /// </param>
+        /// <param name="eventTypes">
+        ///     The types of event messages from which the actor was unsubscribed.
+        /// </param>
+        protected virtual void OnRemovedSubscriber(IActorRef subscriber, IEnumerable<Type> eventTypes)
+        {
+            if (subscriber == null)
+                throw new ArgumentNullException(nameof(subscriber));
+
+            if (eventTypes == null)
+                throw new ArgumentNullException(nameof(eventTypes));
         }
 
         /// <summary>

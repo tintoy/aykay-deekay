@@ -93,7 +93,7 @@ namespace AKDK.Messages.DockerEvents.Converters
                 {
                     return new NetworkConnected();
                 }
-                case DockerEventType.Push:
+                case DockerEventType.Disconnect:
                 {
                     return new NetworkDisconnected();
                 }

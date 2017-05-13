@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 
 namespace AKDK.Actors
 {
+    using System.Collections.Generic;
     using Messages;
     using Messages.DockerEvents;
 
@@ -22,7 +23,7 @@ namespace AKDK.Actors
         ///     All Docker event types.
         /// </summary>
         static readonly ImmutableList<Type> AllDockerEventTypes = ImmutableList.CreateRange(
-            new Type[] { typeof(ImageEvent), typeof(ContainerEvent) }
+            new Type[] { typeof(ImageEvent), typeof(ContainerEvent), typeof(NetworkEvent) }
         );
 
         /// <summary>
@@ -39,6 +40,11 @@ namespace AKDK.Actors
         ///     Is the <see cref="Client"/> used to monitor events still alive?
         /// </summary>
         bool _isClientAlive;
+
+        /// <summary>
+        ///     Are we monitoring events yet?
+        /// </summary>
+        bool _isMonitoringEvents;
 
         /// <summary>
         ///     Create a new <see cref="DockerEventBus"/> actor.
@@ -59,8 +65,9 @@ namespace AKDK.Actors
                 if (terminated.ActorRef == client)
                 {
                     _isClientAlive = false;
+                    _isMonitoringEvents = false;
 
-                    Context.Stop(Self); // TODO: Is this actually the behaviour we're after?
+                    Context.Stop(Self); // TODO: Is this actually the behaviour we're after? Clients should not crash, but can't we request a new one?
                 }
                 else
                     Unhandled(terminated); // Results in DeathPactException
@@ -73,6 +80,29 @@ namespace AKDK.Actors
         protected override ImmutableList<Type> AllEventTypes => AllDockerEventTypes;
 
         /// <summary>
+        ///     Called when an actor has been subscribed to the specified event types.
+        /// </summary>
+        /// <param name="subscriber">
+        ///     The actor that was subscribed.
+        /// </param>
+        /// <param name="eventTypes">
+        ///     The types of event messages to which the actor was subscribed.
+        /// </param>
+        protected override void OnAddedSubscriber(IActorRef subscriber, IEnumerable<Type> eventTypes)
+        {
+            base.OnAddedSubscriber(subscriber, eventTypes);
+
+            if (_isMonitoringEvents)
+                return;
+
+            // Start receiving events.
+            _client.Tell(
+                new MonitorContainerEvents(correlationId: _monitorEventsCorrelationId)
+            );
+            _isMonitoringEvents = true;
+        }
+
+        /// <summary>
         ///     Called when the actor is started.
         /// </summary>
         protected override void PreStart()
@@ -80,11 +110,6 @@ namespace AKDK.Actors
             base.PreStart();
 
             Context.Watch(_client);
-
-            // Start receiving events.
-            _client.Tell(
-                new MonitorContainerEvents(correlationId: _monitorEventsCorrelationId)
-            );
         }
 
         /// <summary>
@@ -94,7 +119,7 @@ namespace AKDK.Actors
         {
             base.PostStop();
 
-            if (_isClientAlive)
+            if (_isClientAlive && _isMonitoringEvents)
             {
                 // Stop receiving events.
                 _client.Tell(

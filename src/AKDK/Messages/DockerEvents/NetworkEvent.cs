@@ -16,6 +16,12 @@ namespace AKDK.Messages.DockerEvents
 		{
 		}
 
+        /// <summary>
+        ///     The Id of the network that the event relates to.
+        /// </summary>
+		[JsonIgnore]
+        public string NetworkId => Actor.Id;
+
 		/// <summary>
 		/// 	The name of the network that the event relates to.
 		/// </summary>

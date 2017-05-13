@@ -20,30 +20,30 @@ namespace AKDK.Tests
         }
 
         [Fact]
-        public void Client_Create_SendsNoMessageToConnection()
+        public void Create_SendsNoMessageToConnection()
         {
             IActorRef client = CreateClient();
             ConnectionTestProbe.ExpectNoMsg();
         }
 
         [Fact]
-        public void Client_ListImages_Success()
+        public void ListImages_Success()
         {
             IActorRef client = CreateClient();
             client.Tell(
                 new ListImages(new ImagesListParameters(),
-                    correlationId: nameof(Client_ListImages_Success)
+                    correlationId: nameof(ListImages_Success)
                 )
             );
             ConnectionTestProbe.ExpectMsg<Connection.ExecuteCommand>(executeCommand =>
             {
                 Assert.IsType<ListImages>(executeCommand.RequestMessage);
                 Assert.Equal(
-                    expected: nameof(Client_ListImages_Success),
+                    expected: nameof(ListImages_Success),
                     actual: executeCommand.CorrelationId
                 );
                 Assert.Equal(
-                    expected: nameof(Client_ListImages_Success),
+                    expected: nameof(ListImages_Success),
                     actual: executeCommand.RequestMessage.CorrelationId
                 );
 
@@ -55,7 +55,7 @@ namespace AKDK.Tests
             ExpectMsg<ImageList>(imageList =>
             {
                 Assert.Equal(
-                    expected: nameof(Client_ListImages_Success),
+                    expected: nameof(ListImages_Success),
                     actual: imageList.CorrelationId
                 );
                 Assert.Equal(0, imageList.Images.Count);

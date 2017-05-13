@@ -43,17 +43,23 @@ namespace AKDK.Tests
         /// <summary>
         ///     Create a new <see cref="Client"/> actor that uses <see cref="ConnectionTestProbe"/>.
         /// </summary>
+        /// <param name="connection">
+        ///     An optional reference to the <see cref="Connection"/> actor to use (uses <see cref="ConnectionTestProbe"/> if not specified).
+        /// </param>
         /// <param name="name">
         ///     An optional name for the <see cref="Client"/> actor (defaults to "client" if not specified).
         /// </param>
         /// <returns>
         ///     A reference to the <see cref="Client"/> actor.
         /// </returns>
-        protected virtual IActorRef CreateClient(string name = null)
+        protected virtual IActorRef CreateClient(IActorRef connection = null, string name = null)
         {
+            if (connection == null)
+                connection = ConnectionTestProbe;
+
             return Sys.ActorOf(
                 Props.Create(
-                    () => new Client(ConnectionTestProbe)
+                    () => new Client(connection)
                 ),
                 name: name ?? "client"
             );

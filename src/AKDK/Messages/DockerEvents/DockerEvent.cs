@@ -27,24 +27,25 @@ namespace AKDK.Messages.DockerEvents
         /// <summary>
         ///     The message correlation Id.
         /// </summary>
+        [JsonProperty("CorrelationId")]
         public string CorrelationId { get; internal set; }
 
-		/// <summary>
+        /// <summary>
         /// 	The Id of the entity that the event relates to.
         /// </summary>
-		[JsonProperty("id")]
-		public string Target { get; set; }
+        [JsonIgnore]
+        public string Target => GetActorAttribute("ID");
 
 		/// <summary>
         /// 	The type of entity (e.g. image, container, etc) that the event relates to.
         /// </summary>
-        [JsonIgnore]
+        [JsonProperty("Type")]
 		public DockerEventTarget TargetType { get; }
 
         /// <summary>
         /// 	The event type.
         /// </summary>
-        [JsonIgnore]
+        [JsonProperty("Action")]
         public DockerEventType EventType { get; }
 
 		/// <summary>
@@ -92,6 +93,17 @@ namespace AKDK.Messages.DockerEvents
         /// <summary>
         ///     Serialise the event to JSON.
         /// </summary>
+        /// <returns>
+        ///     A string containing the serialised event data.
+        /// </returns>
+        public string ToJson()
+        {
+            return JsonConvert.SerializeObject(this, SerializerSettings);
+        }
+
+        /// <summary>
+        ///     Serialise the event to JSON.
+        /// </summary>
         /// <param name="writer">
         ///     The <see cref="JsonWriter"/> used to write the serialised event data.
         /// </param>
@@ -109,15 +121,24 @@ namespace AKDK.Messages.DockerEvents
         /// <param name="json">
         ///     The JSON.
         /// </param>
+        /// <param name="correlationId">
+        ///     An optional message correlation Id.
+        /// </param>
         /// <returns>
         ///     The deserialised docker event.
         /// </returns>
-        public static DockerEvent FromJson(string json)
+        public static DockerEvent FromJson(string json, string correlationId = null)
         {
             if (String.IsNullOrWhiteSpace(json))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(json)}.", nameof(json));
 
-            return JsonConvert.DeserializeObject<DockerEvent>(json);
+            DockerEvent evt = JsonConvert.DeserializeObject<DockerEvent>(json);
+
+            // Don't override existing correlation Id.
+            if (evt.CorrelationId == null)
+                evt.CorrelationId = correlationId ?? CorrelatedMessage.NewCorrelationId();
+
+            return evt;
         }
 	}
 
