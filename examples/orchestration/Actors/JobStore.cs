@@ -4,16 +4,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
-    using Messages;
-
     /// <summary>
     ///     Actor used to persist information about active jobs.
     /// </summary>
-    public class JobStore
+    public partial class JobStore
         : ReceiveActorEx
     {
         /// <summary>
@@ -73,19 +72,19 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             Receive<CreateJob>(createJob =>
             {
-                JobData newJob = new JobData
+                JobData jobData = new JobData
                 {
                     Id = _data.NextJobId++,
+                    Status = JobStatus.Created,
                     TargetUrl = createJob.TargetUrl
                 };
-                _data.Jobs.Add(newJob.Id, newJob);
+                _data.Jobs.Add(jobData.Id, jobData);
 
                 Persist();
 
-                _jobStoreEvents.Tell(new JobCreated(
+                _jobStoreEvents.Tell(new JobStoreEvents.JobCreated(
                     correlationId: createJob.CorrelationId,
-                    jobId: newJob.Id,
-                    targetUrl: newJob.TargetUrl
+                    job: jobData.ToJob()
                 ));
             });
             Forward<EventBusActor.Subscribe>(_jobStoreEvents);
@@ -174,10 +173,67 @@ namespace AKDK.Examples.Orchestration.Actors
             public int Id { get; set; }
 
             /// <summary>
+            ///     The job status.
+            /// </summary>
+            [JsonProperty("status")]
+            public JobStatus Status { get; set; }
+
+            /// <summary>
             ///     The URL to fetch.
             /// </summary>
             [JsonProperty("targetUrl")]
             public Uri TargetUrl { get; set; }
+
+            /// <summary>
+            ///     The content (if any) fetched from the target URL.
+            /// </summary>
+            [JsonProperty("content", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+            public string Content { get; set; }
+
+            /// <summary>
+            ///     Messages (if any) associated with the job.
+            /// </summary>
+            [JsonProperty("messages", ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+            public List<string> Messages { get; } = new List<string>();
+
+            /// <summary>
+            ///     Convert the <see cref="JobData"/> to a <see cref="Job"/>.
+            /// </summary>
+            /// <returns>
+            ///     The new <see cref="Job"/>.
+            /// </returns>
+            public Job ToJob()
+            {
+                return new Job(Id, Status, TargetUrl, Content,
+                    messages: ImmutableList.CreateRange(Messages)
+                );
+            }
+
+            /// <summary>
+            ///     Create a <see cref="JobData"/> from the specified <see cref="Job"/>.
+            /// </summary>
+            /// <param name="job">
+            ///     The <see cref="Job"/>.
+            /// </param>
+            /// <returns>
+            ///     The new <see cref="JobData"/>.
+            /// </returns>
+            public static JobData FromJob(Job job)
+            {
+                if (job == null)
+                    throw new ArgumentNullException(nameof(job));
+
+                var jobData = new JobData
+                {
+                    Id = job.Id,
+                    TargetUrl = job.TargetUrl,
+                    Content = job.Content
+                };
+
+                jobData.Messages.AddRange(job.Messages);
+
+                return jobData;
+            }
         }
 
         /// <summary>

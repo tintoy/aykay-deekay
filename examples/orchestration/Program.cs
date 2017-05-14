@@ -2,7 +2,6 @@
 using Akka.Actor.Dsl;
 using Akka.Configuration;
 using AKDK.Actors;
-using AKDK.Messages;
 using System;
 using System.IO;
 using System.Threading;
@@ -85,13 +84,13 @@ namespace AKDK.Examples.Orchestration
                             client = connected.Client;
 
                             Console.WriteLine("Creating job...");
-                            jobStore.Tell(new CreateJob(
+                            jobStore.Tell(new JobStore.CreateJob(
                                 targetUrl: new Uri("https://www.google.com/")
                             ));
                         });
-                        actor.Receive<JobCreated>((jobCreated, context) =>
+                        actor.Receive<JobStoreEvents.JobCreated>((jobCreated, context) =>
                         {
-                            Console.WriteLine("Job {0} created.", jobCreated.JobId);
+                            Console.WriteLine("Job {0} created.", jobCreated.Job.Id);
 
                             completed.Set();
                         });

@@ -5,13 +5,11 @@ using System.Collections.Immutable;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
-    using Messages;
-
     /// <summary>
     ///     Actor that manages the job store event bus.
     /// </summary>
-    class JobStoreEvents
-        : EventBusActor<JobStoreEvent>
+    partial class JobStoreEvents
+        : EventBusActor<JobStoreEvents.JobStoreEvent>
     {
         /// <summary>
         ///     The default name for instances of the <see cref="JobStoreEvents"/> actor.

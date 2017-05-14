@@ -2,12 +2,9 @@
 using AKDK.Actors;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
-    using Messages;
-
     /// <summary>
     ///     Actor that dispatches jobs and tracks their state.
     /// </summary>
@@ -19,32 +16,56 @@ namespace AKDK.Examples.Orchestration.Actors
         /// </summary>
         readonly Dictionary<int, IActorRef> _jobContainers = new Dictionary<int, IActorRef>();
 
-        readonly IActorRef _jobStore;
+        /// <summary>
+        ///     A reference to the <see cref="JobStore"/> actor.
+        /// </summary>
+        readonly IActorRef                  _jobStore;
 
-        public Dispatcher(IActorRef jobStore)
+        /// <summary>
+        ///     A reference to the <see cref="Launcher"/> actor.
+        /// </summary>
+        readonly IActorRef                  _launcher;
+
+        /// <summary>
+        ///     Create a new <see cref="Dispatcher"/>.
+        /// </summary>
+        /// <param name="jobStore">
+        ///     A reference to the <see cref="JobStore"/> actor.
+        /// </param>
+        /// <param name="launcher">
+        ///     A reference to the <see cref="Launcher"/> actor.
+        /// </param>
+        public Dispatcher(IActorRef jobStore, IActorRef launcher)
         {
             if (jobStore == null)
                 throw new ArgumentNullException(nameof(jobStore));
 
-            Receive<JobCreated>(jobCreated =>
+            if (launcher == null)
+                throw new ArgumentNullException(nameof(launcher));
+
+            _jobStore = jobStore;
+            _launcher = launcher;
+
+            Receive<JobStoreEvents.JobCreated>(jobCreated =>
             {
-                // TODO: Schedule job.
+                // TODO: Start job using Launcher.
             });
         }
 
+        /// <summary>
+        ///     Called when the actor is started.
+        /// </summary>
         protected override void PreStart()
         {
             base.PreStart();
 
-            Context.Watch(_jobStore);
             _jobStore.Tell(
-                new EventBusActor.Subscribe(Self,
-                    eventTypes: new Type[]
-                    {
-                        typeof(JobCreated)
-                    }
-                )
+                new EventBusActor.Subscribe(Self, eventTypes: new Type[]
+                {
+                    typeof(JobStoreEvents.JobCreated)
+                })
             );
+            Context.Watch(_jobStore);
         }
     }
 }
