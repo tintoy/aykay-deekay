@@ -16,6 +16,12 @@ namespace AKDK.Messages.DockerEvents
 		{
 		}
 
+        /// <summary>
+        ///     The Id of the container that the event relates to.
+        /// </summary>
+        [JsonProperty("id")]
+        public string ContainerId { get; set; }
+
 		/// <summary>
 		/// 	The name of the container that the event relates to.
 		/// </summary>
@@ -58,4 +64,19 @@ namespace AKDK.Messages.DockerEvents
 		{
 		}
 	}
+
+    /// <summary>
+    ///		Model for the event raised when a container has been destroyed. 
+    /// </summary>
+	public class ContainerDestroyed
+        : ContainerEvent
+    {
+        /// <summary>
+        ///		Create a new <see cref="ContainerDestroyed"/> event model. 
+        /// </summary>
+        public ContainerDestroyed()
+            : base(DockerEventType.Destroy)
+        {
+        }
+    }
 }
