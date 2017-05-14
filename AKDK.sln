@@ -13,12 +13,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{086AD980-4
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AKDK.Tests", "test\AKDK.Tests\AKDK.Tests.csproj", "{569D3624-D5C6-493B-B279-1DA3200EA090}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{202625F1-B80E-4F83-AC8C-99FBD4A93DD3}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{202625F1-B80E-4F83-AC8C-99FBD4A93DD3}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKDK.TestHarness", "test\AKDK.TestHarness\AKDK.TestHarness.csproj", "{8756D044-2431-4C78-B1AF-E4AB82F45DF7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{05BD88BC-1C30-4685-839D-0DB01B27B4E5}"
+	ProjectSection(SolutionItems) = preProject
+		examples\Examples.props = examples\Examples.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKDK.Examples.Orchestration", "examples\orchestration\AKDK.Examples.Orchestration.csproj", "{31A7509A-61BB-4D28-A489-C62DAEAE5C38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -66,6 +73,18 @@ Global
 		{8756D044-2431-4C78-B1AF-E4AB82F45DF7}.Release|x64.Build.0 = Release|Any CPU
 		{8756D044-2431-4C78-B1AF-E4AB82F45DF7}.Release|x86.ActiveCfg = Release|Any CPU
 		{8756D044-2431-4C78-B1AF-E4AB82F45DF7}.Release|x86.Build.0 = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|x64.Build.0 = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Debug|x86.Build.0 = Debug|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|x64.ActiveCfg = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|x64.Build.0 = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|x86.ActiveCfg = Release|Any CPU
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,5 +93,6 @@ Global
 		{23AED78A-9776-477E-93BD-86F6F228C194} = {A1F96380-2DC6-47CD-856C-A38DE022B12C}
 		{569D3624-D5C6-493B-B279-1DA3200EA090} = {086AD980-4E6E-4A39-B1EE-5105C9BC2D3F}
 		{8756D044-2431-4C78-B1AF-E4AB82F45DF7} = {086AD980-4E6E-4A39-B1EE-5105C9BC2D3F}
+		{31A7509A-61BB-4D28-A489-C62DAEAE5C38} = {05BD88BC-1C30-4685-839D-0DB01B27B4E5}
 	EndGlobalSection
 EndGlobal

@@ -237,3 +237,7 @@ FakesAssemblies/
 ## Mac
 
 .DS_Store
+
+## Data
+
+job-store.json

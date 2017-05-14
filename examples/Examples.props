@@ -1,0 +1,17 @@
+<Project>
+	<!-- Common project settings -->
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+	
+    <!-- Common package properties -->
+    <PropertyGroup>
+        <PackageProjectUrl>https://github.com/tintoy/akdk/</PackageProjectUrl>
+        <PackageLicenseUrl>https://raw.githubusercontent.com/tintoy/akdk/master/LICENSE</PackageLicenseUrl>
+
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/tintoy/akdk</RepositoryUrl>
+    </PropertyGroup>
+    
+    <Import Project="../VersionInfo.props" />
+</Project>

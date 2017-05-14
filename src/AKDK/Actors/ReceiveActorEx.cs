@@ -73,6 +73,26 @@ namespace AKDK.Actors
         }
 
         /// <summary>
+        ///     Forward all instances of <typeparamref name="TMessage"/> to the specified actor.
+        /// </summary>
+        /// <typeparam name="TMessage">
+        ///     The base message type to forward.
+        /// </typeparam>
+        /// <param name="toActor">
+        ///     The actor to which messages will be forwarded.
+        /// </param>
+        protected virtual void Forward<TMessage>(IActorRef toActor)
+        {
+            if (toActor == null)
+                throw new ArgumentNullException(nameof(toActor));
+
+            Receive<TMessage>(message =>
+            {
+                toActor.Forward(message);
+            });
+        }
+
+        /// <summary>
         ///		Create the log message formatter to be used by the actor.
         /// </summary>
         /// <returns>
