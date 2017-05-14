@@ -81,7 +81,7 @@ namespace AKDK.Examples.Orchestration
                         });
                         actor.Receive<Connected>((connected, context) =>
                         {
-                            Console.WriteLine("Connected to Docker.");
+                            Console.WriteLine("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
                             client = connected.Client;
 
                             Console.WriteLine("Creating job...");

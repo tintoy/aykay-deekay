@@ -47,10 +47,11 @@ namespace AKDK.Actors
                         connect.EndpointUri
                     );
 
-                    IActorRef client = await CreateClientAsync(connect);
+                    (IActorRef client, Version apiVersion) = await CreateClientAsync(connect);
 
                     Sender.Tell(new Connected(client,
                         endpointUri: connect.EndpointUri,
+                        apiVersion: apiVersion,
                         correlationId: connect.CorrelationId
                     ));
                 }
@@ -110,9 +111,9 @@ namespace AKDK.Actors
         ///     The <see cref="Connect"/> request message.
         /// </param>
         /// <returns>
-        ///     A reference to the <see cref="Client"/> actor.
+        ///     A reference to the <see cref="Client"/> actor, and the API version.
         /// </returns>
-        async Task<IActorRef> CreateClientAsync(Connect connectRequest)
+        async Task<(IActorRef, Version)> CreateClientAsync(Connect connectRequest)
         {
             if (connectRequest == null)
                 throw new ArgumentNullException(nameof(connectRequest));
@@ -159,7 +160,7 @@ namespace AKDK.Actors
                 connectRequest.CorrelationId
             );
 
-            return clientActor;
+            return (clientActor, apiVersion);
         }
 
         /// <summary>

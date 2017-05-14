@@ -20,14 +20,18 @@ namespace AKDK.Messages
         /// <param name="endpointUri">
         ///     The end-point URI for the Docker API.
         /// </param>
+        /// <param name="apiVersion">
+        ///     The Docker API version.
+        /// </param>
         /// <param name="correlationId">
         ///     The message correlation Id.
         /// </param>
-        public Connected(IActorRef client, Uri endpointUri, string correlationId)
+        public Connected(IActorRef client, Uri endpointUri, Version apiVersion, string correlationId)
             : base(correlationId)
         {
             Client = client;
             EndpointUri = endpointUri;
+            ApiVersion = apiVersion;
         }
 
         /// <summary>
@@ -39,6 +43,11 @@ namespace AKDK.Messages
         ///     The end-point URI for the Docker API.
         /// </summary>
         public Uri EndpointUri { get; }
+
+        /// <summary>
+        ///     The Docker API version.
+        /// </summary>
+        public Version ApiVersion { get; }
 
         /// <summary>
         ///     Is the connection to the local Docker API?

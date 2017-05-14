@@ -53,13 +53,13 @@ namespace AKDK.TestHarness
 
                         actor.OnPreStart = context =>
                         {
-                            Console.WriteLine("Connecting...");
+                            Console.WriteLine("Connecting to Docker...");
                             context.System.Docker().RequestConnectLocal(context.Self);
                         };
 
                         actor.Receive<Connected>((connected, context) =>
                         {
-                            Console.WriteLine("Connected.");
+                            Console.WriteLine("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
                             client = connected.Client;
 
                             Console.WriteLine("Subscribing to Docker event bus...");
