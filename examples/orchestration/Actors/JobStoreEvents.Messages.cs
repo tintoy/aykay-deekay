@@ -55,5 +55,35 @@ namespace AKDK.Examples.Orchestration.Actors
             /// </summary>
             public Job Job { get; }
         }
+
+        /// <summary>
+        ///     Event raised when a job is started.
+        /// </summary>
+        public class JobStarted
+            : JobStoreEvent
+        {
+            /// <summary>
+            ///     Create a new <see cref="JobStarted"/> event.
+            /// </summary>
+            /// <param name="correlationId">
+            ///     The event message correlation Id.
+            /// </param>
+            /// <param name="job">
+            ///     The job that was started.
+            /// </param>
+            public JobStarted(string correlationId, Job job)
+                : base(correlationId)
+            {
+                if (job == null)
+                    throw new ArgumentNullException(nameof(job));
+
+                Job = job;
+            }
+
+            /// <summary>
+            ///     The job that was started.
+            /// </summary>
+            public Job Job { get; }
+        }
     }
 }

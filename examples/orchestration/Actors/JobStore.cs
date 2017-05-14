@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using AKDK.Actors;
+using AKDK.Messages;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -86,6 +87,66 @@ namespace AKDK.Examples.Orchestration.Actors
                     correlationId: createJob.CorrelationId,
                     job: jobData.ToJob()
                 ));
+            });
+            Receive<UpdateJob>(updateJob =>
+            {
+                JobData jobData;
+                if (!_data.Jobs.TryGetValue(updateJob.JobId, out jobData))
+                {
+                    Log.Warning("Received request to update non-existent job '{0}' from '{1}'.",
+                        updateJob.JobId,
+                        Sender
+                    );
+
+                    Sender.Tell(new OperationFailure(updateJob.CorrelationId,
+                        operationName: $"Update Job {updateJob.JobId}",
+                        reason: new Exception($"Job {updateJob.JobId} not found.") // TODO: Custom exception type.
+                    ));
+
+                    return;
+                }
+
+                bool statusChange = updateJob.Status != jobData.Status;
+                if (!statusChange && updateJob.AppendMessages.Count == 0)
+                    return; // Nothing to do.
+
+                jobData.Status = updateJob.Status;
+                jobData.Messages.AddRange(updateJob.AppendMessages);
+
+                Persist();
+
+                if (statusChange)
+                {
+                    switch (jobData.Status)
+                    {
+                        case JobStatus.Pending:
+                        {
+                            // TODO: Define JobStoreEvents.JobPending message.
+
+                            break;
+                        }
+                        case JobStatus.Active:
+                        {
+                            _jobStoreEvents.Tell(new JobStoreEvents.JobStarted(updateJob.CorrelationId,
+                                job: jobData.ToJob()
+                            ));
+
+                            break;
+                        }
+                        case JobStatus.Completed:
+                        {
+                            // TODO: Define JobStoreEvents.JobCompleted message.
+
+                            break;
+                        }
+                        case JobStatus.Failed:
+                        {
+                            // TODO: Define JobStoreEvents.JobFailed message.
+
+                            break;
+                        }
+                    }
+                }
             });
             Forward<EventBusActor.Subscribe>(_jobStoreEvents);
             Forward<EventBusActor.Unsubscribe>(_jobStoreEvents);

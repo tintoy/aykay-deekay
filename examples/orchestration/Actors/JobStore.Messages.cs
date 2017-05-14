@@ -3,6 +3,8 @@
 namespace AKDK.Examples.Orchestration.Actors
 {
     using Messages;
+    using System.Collections.Generic;
+    using System.Collections.Immutable;
 
     /// <summary>
     ///     Actor used to persist information about active jobs.
@@ -40,6 +42,22 @@ namespace AKDK.Examples.Orchestration.Actors
             ///     An optional message-correlation Id.
             /// </summary>
             public Uri TargetUrl { get; }
+        }
+
+        public class UpdateJob
+            : CorrelatedMessage
+        {
+            public UpdateJob(int jobId, JobStatus status, IEnumerable<string> appendMessages = null, string correlationId = null)
+                : base(correlationId)
+            {
+                JobId = jobId;
+                Status = status;
+                AppendMessages = appendMessages != null ? ImmutableList.CreateRange(appendMessages) : ImmutableList<string>.Empty;
+            }
+
+            public int JobId { get; }
+            public JobStatus Status { get; }
+            public ImmutableList<string> AppendMessages { get; }
         }
     }
 }

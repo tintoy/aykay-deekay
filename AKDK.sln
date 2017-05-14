@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.4
+VisualStudioVersion = 15.0.26430.6
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A1F96380-2DC6-47CD-856C-A38DE022B12C}"
 	ProjectSection(SolutionItems) = preProject
@@ -26,6 +26,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{05
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKDK.Examples.Orchestration", "examples\orchestration\AKDK.Examples.Orchestration.csproj", "{31A7509A-61BB-4D28-A489-C62DAEAE5C38}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker-images", "docker-images", "{7AD87F51-CB68-4477-9411-0B34E6893C11}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fetcher", "fetcher", "{444E1A3E-AD33-48F2-BA09-EACCAC02DF9B}"
+	ProjectSection(SolutionItems) = preProject
+		examples\docker-images\fetcher\Dockerfile = examples\docker-images\fetcher\Dockerfile
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -94,5 +101,7 @@ Global
 		{569D3624-D5C6-493B-B279-1DA3200EA090} = {086AD980-4E6E-4A39-B1EE-5105C9BC2D3F}
 		{8756D044-2431-4C78-B1AF-E4AB82F45DF7} = {086AD980-4E6E-4A39-B1EE-5105C9BC2D3F}
 		{31A7509A-61BB-4D28-A489-C62DAEAE5C38} = {05BD88BC-1C30-4685-839D-0DB01B27B4E5}
+		{7AD87F51-CB68-4477-9411-0B34E6893C11} = {05BD88BC-1C30-4685-839D-0DB01B27B4E5}
+		{444E1A3E-AD33-48F2-BA09-EACCAC02DF9B} = {7AD87F51-CB68-4477-9411-0B34E6893C11}
 	EndGlobalSection
 EndGlobal

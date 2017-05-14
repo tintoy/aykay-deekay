@@ -251,19 +251,19 @@ namespace AKDK.Actors.Streaming
             /// <param name="correlationId">
             ///		The message correlation Id.
             /// </param>
-            /// <param name="exception">
+            /// <param name="reason">
             ///		An <see cref="System.Exception"/> representing error.
             /// </param>
-            public StreamError(string correlationId, Exception exception)
+            public StreamError(string correlationId, Exception reason)
                 : base(correlationId)
             {
-                Exception = exception;
+                Reason = reason;
             }
 
             /// <summary>
-            ///		An <see cref="System.Exception"/> representing error.
+            ///		An <see cref="Exception"/> representing error.
             /// </summary>
-            public Exception Exception { get; }
+            public Exception Reason { get; }
         }
     }
 }

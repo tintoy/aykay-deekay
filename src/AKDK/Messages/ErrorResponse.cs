@@ -14,14 +14,14 @@ namespace AKDK.Messages
         /// <param name="request">
         ///		The request that the response relates to.
         /// </param>
-        /// <param name="exception">
+        /// <param name="reason">
         ///		An exception representing the error.
         /// </param>
-        public ErrorResponse(Request request, Exception exception)
+        public ErrorResponse(Request request, Exception reason)
             : base(request.CorrelationId)
         {
             Request = request;
-            Exception = exception;
+            Reason = reason;
         }
 
         /// <summary>
@@ -32,6 +32,6 @@ namespace AKDK.Messages
         /// <summary>
         ///		An exception representing the error.
         /// </summary>
-        public Exception Exception { get; }
+        public Exception Reason { get; }
     }
 }

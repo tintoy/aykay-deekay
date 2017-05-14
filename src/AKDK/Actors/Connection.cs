@@ -171,7 +171,7 @@ namespace AKDK.Actors
 
                     inFlightRequest.ReplyTo.Tell(new ErrorResponse(
                         request: inFlightRequest.RequestMessage,
-                        exception: commandResult.Exception
+                        reason: commandResult.Exception
                     ));
                 }
 

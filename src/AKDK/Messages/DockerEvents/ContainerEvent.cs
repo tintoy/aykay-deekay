@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using System;
 
 namespace AKDK.Messages.DockerEvents
 {
@@ -63,6 +64,13 @@ namespace AKDK.Messages.DockerEvents
             : base(DockerEventType.Die)
 		{
 		}
+
+        /// <summary>
+        ///     The container exit code.
+        /// </summary>
+        public int ExitCode => Int32.Parse(
+            GetActorAttribute("exitCode")
+        );
 	}
 
     /// <summary>

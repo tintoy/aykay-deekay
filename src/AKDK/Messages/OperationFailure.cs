@@ -17,14 +17,14 @@ namespace AKDK.Messages
         /// <param name="operationName">
         ///		The name of the operation that failed.
         /// </param>
-        /// <param name="exception">
-        ///		An <see cref="System.Exception"/> representing the failed exception.
+        /// <param name="reason">
+        ///		An <see cref="Exception"/> representing the reason for the failure.
         /// </param>
-        public OperationFailure(string correlationId, string operationName, Exception exception)
+        public OperationFailure(string correlationId, string operationName, Exception reason)
             : base(correlationId)
         {
             OperationName = operationName;
-            Exception = exception;
+            Reason = reason;
         }
 
         /// <summary>
@@ -33,8 +33,8 @@ namespace AKDK.Messages
         public string OperationName { get; }
 
         /// <summary>
-        ///		An <see cref="System.Exception"/> representing the failed exception.
+        ///		An <see cref="Exception"/> representing the reason for the failure.
         /// </summary>
-        public Exception Exception { get; }
+        public Exception Reason { get; }
     }
 }

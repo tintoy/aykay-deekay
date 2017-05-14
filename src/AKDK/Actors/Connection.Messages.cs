@@ -111,7 +111,7 @@ namespace AKDK.Actors
             /// <summary>
             ///     The exception (if any) that was raised when executing the command.
             /// </summary>
-            public Exception Exception => (ResponseMessage is ErrorResponse errorResponse) ? errorResponse.Exception : null;
+            public Exception Exception => (ResponseMessage is ErrorResponse errorResponse) ? errorResponse.Reason : null;
 
             /// <summary>
             ///     The response stream (if the response is streamed).
