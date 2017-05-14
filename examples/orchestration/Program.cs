@@ -51,7 +51,7 @@ namespace AKDK.Examples.Orchestration
                 {
                     Console.WriteLine("Running.");
 
-                    system.ActorOf(actor =>
+                    IActorRef app = system.ActorOf(actor =>
                     {
                         IActorRef jobStore = null;
                         IActorRef client = null;
@@ -94,7 +94,7 @@ namespace AKDK.Examples.Orchestration
 
                             completed.Set();
                         });
-                    });
+                    }, name: "app");
 
                     completed.WaitOne();
 
