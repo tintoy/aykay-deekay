@@ -12,7 +12,7 @@ namespace AKDK.Examples.Orchestration
     using Messages;
 
     /// <summary>
-    ///     Host for the orchestration example.
+    ///     Example of using AK/DK to orchestrate Docker containers.
     /// </summary>
     static class Program
     {
