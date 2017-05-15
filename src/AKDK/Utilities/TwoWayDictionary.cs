@@ -29,6 +29,39 @@ namespace AKDK.Utilities
         }
 
         /// <summary>
+        ///     Create a new <see cref="TwoWayDictionary{T1, T2}"/> by copying the items in the specified <see cref="TwoWayDictionary{T1, T2}"/>.
+        /// </summary>
+        /// <param name="twoWayDictionary">
+        ///     The <see cref="TwoWayDictionary{T1, T2}"/> to copy.
+        /// </param>
+        public TwoWayDictionary(TwoWayDictionary<T1, T2> twoWayDictionary)
+        {
+            if (twoWayDictionary == null)
+                throw new ArgumentNullException(nameof(twoWayDictionary));
+
+            foreach (var item in twoWayDictionary._forwardDictionary)
+                _forwardDictionary.Add(item.Key, item.Value);
+
+            foreach (var item in twoWayDictionary._reverseDictionary)
+                _reverseDictionary.Add(item.Key, item.Value);
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="TwoWayDictionary{T1, T2}"/> containing the specified items.
+        /// </summary>
+        /// <param name="items">
+        ///     A sequence of <see cref="KeyValuePair{TKey, TValue}"/>s to add to the <see cref="TwoWayDictionary{T1, T2}"/>.
+        /// </param>
+        public TwoWayDictionary(IEnumerable<KeyValuePair<T2, T1>> items)
+        {
+            if (items == null)
+                throw new ArgumentNullException(nameof(items));
+
+            foreach (KeyValuePair<T2, T1> item in items)
+                Add(item.Key, item.Value);
+        }
+
+        /// <summary>
         ///     Create a new <see cref="TwoWayDictionary{T1, T2}"/> containing the specified items.
         /// </summary>
         /// <param name="items">
