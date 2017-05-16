@@ -18,7 +18,7 @@ namespace AKDK.Examples.Orchestration
     static class Program
     {
         /// <summary>
-        ///     Basic HOCON-style configuration for the test harness.
+        ///     Basic HOCON-style configuration for the orchestration example.
         /// </summary>
         static readonly Config AkkaConfig = ConfigurationFactory.ParseString(
             @"

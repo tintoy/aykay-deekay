@@ -14,7 +14,7 @@ namespace AKDK.Examples.Orchestration.Actors
     ///     Actor that dispatches jobs and tracks their state.
     /// </summary>
     public partial class Dispatcher
-        : ReceiveActorEx
+        : ReceiveActorEx, IWithUnboundedStash
     {
         /// <summary>
         ///     The default name for instances of the <see cref="Dispatcher"/> actor.
@@ -77,6 +77,38 @@ namespace AKDK.Examples.Orchestration.Actors
             _stateDirectory = stateDirectory;
             _jobStore = jobStore;
             _launcher = launcher;
+        }
+
+        /// <summary>
+        ///     The actor's message stash.
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        ///     Called when the actor is initialising.
+        /// </summary>
+        void Initializing()
+        {
+            // AF: There is still a race condition for startup; if the call to Thread.Sleep in Program.cs is removed, the system does not process the job.
+            // TODO: Figure out why (probably when I get back - out of time for now).
+
+            Receive<EventBusActor.Subscribed>(subscribed =>
+            {
+                Become(Ready);
+            });
+            Receive<object>(_ =>
+            {
+                // Wait till we're ready.
+                Stash.Stash();
+            });
+        }
+
+        /// <summary>
+        ///     Called when the dispatcher is ready to handle requests.
+        /// </summary>
+        void Ready()
+        {
+            Stash.UnstashAll();
 
             Receive<JobStoreEvents.JobCreated>(jobCreated =>
             {
@@ -286,6 +318,8 @@ namespace AKDK.Examples.Orchestration.Actors
                 })
             );
             Context.Watch(_jobStore);
+
+            Become(Initializing);
         }
 
         /// <summary>

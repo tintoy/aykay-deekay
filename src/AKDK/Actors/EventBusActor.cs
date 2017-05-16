@@ -169,7 +169,7 @@ namespace AKDK.Actors
 
                 AddSubscriber(subscribe.Subscriber, eventTypes);
 
-                Sender.Tell(
+                subscribe.Subscriber.Tell(
                     new EventBusActor.Subscribed(subscribe.CorrelationId, eventTypes)
                 );
             });
@@ -180,7 +180,7 @@ namespace AKDK.Actors
                 else
                     RemoveSubscriber(unsubscribe.Subscriber);
 
-                Sender.Tell(
+                unsubscribe.Subscriber.Tell(
                     new EventBusActor.Unsubscribed(unsubscribe.CorrelationId, unsubscribe.EventTypes)
                 );
             });
