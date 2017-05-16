@@ -13,7 +13,7 @@ namespace AKDK.Examples.Orchestration.Actors
     /// <summary>
     ///     Actor that dispatches jobs and tracks their state.
     /// </summary>
-    public class Dispatcher
+    public partial class Dispatcher
         : ReceiveActorEx
     {
         /// <summary>
@@ -30,6 +30,11 @@ namespace AKDK.Examples.Orchestration.Actors
         ///     <see cref="Process"/>es for active jobs, keyed by job Id.
         /// </summary>
         readonly Dictionary<int, IActorRef> _jobProcesses = new Dictionary<int, IActorRef>();
+
+        /// <summary>
+        ///     Actors to notify when all active job processes have been completed.
+        /// </summary>
+        readonly Queue<IActorRef>           _notifyJobProcessCompletion = new Queue<IActorRef>();
 
         /// <summary>
         ///     The directory containing job-specific state directories.
@@ -112,6 +117,7 @@ namespace AKDK.Examples.Orchestration.Actors
                     return;
                 }
 
+                Context.Watch(processCreated.Process);
                 _jobProcesses.Add(activeJob.Id, processCreated.Process);
 
                 Log.Info("Starting container '{0}' for job '{1}'...", processCreated.ContainerId, activeJob.Id);
@@ -204,6 +210,62 @@ namespace AKDK.Examples.Orchestration.Actors
                     new Process.Destroy(jobCompleted.CorrelationId)
                 );
             });
+            Receive<NotifyWhenAllJobsCompleted>(notifyWhenAllJobsCompleted =>
+            {
+                if (_activeJobs.Count == 0)
+                {
+                    Sender.Tell(
+                        new AllJobsCompleted()
+                    );
+                }
+                else
+                    _notifyJobProcessCompletion.Enqueue(Sender);
+            });
+            Receive<Terminated>(terminated =>
+            {
+                if (terminated.ActorRef == _jobStore)
+                {
+                    Log.Warning("Job store has terminated; the dispatcher cannot continue.");
+
+                    Unhandled(terminated); // Results in DeathPactException.
+
+                    return;
+                }
+
+                // TODO: Improve job / message lookup (stop relying on correlation Id!).
+
+                int jobId = -1;
+                foreach (var jobIdAndJobProcess in _jobProcesses)
+                {
+                    if (jobIdAndJobProcess.Value == terminated.ActorRef)
+                        jobId = jobIdAndJobProcess.Key;
+                }
+
+                if (jobId == -1)
+                {
+                    Log.Warning("Received unexpected actor-termination message; cannot determine job associated with process '{0}'.",
+                        terminated.ActorRef
+                    );
+
+                    Unhandled(terminated); // Results in DeathPactException.
+
+                    return;
+                }
+
+                _jobProcesses.Remove(jobId);
+
+                string jobCorrelationId = null;
+                foreach (var correlationIdAndActiveJob in _activeJobs)
+                {
+                    if (correlationIdAndActiveJob.Value.Id == jobId)
+                        jobCorrelationId = correlationIdAndActiveJob.Key;
+                }
+                if (jobCorrelationId != null)
+                    _activeJobs.Remove(jobCorrelationId);
+
+                if (_activeJobs.Count + _jobProcesses.Count == 0)
+                    NotifyAllJobsCompleted();
+            });
         }
 
         /// <summary>
@@ -224,6 +286,19 @@ namespace AKDK.Examples.Orchestration.Actors
                 })
             );
             Context.Watch(_jobStore);
+        }
+
+        /// <summary>
+        ///     Notify interested parties that all active jobs have been completed.
+        /// </summary>
+        void NotifyAllJobsCompleted()
+        {
+            while (_notifyJobProcessCompletion.Count > 0)
+            {
+                _notifyJobProcessCompletion.Dequeue().Tell(
+                    new AllJobsCompleted()
+                );
+            }
         }
 
         public static Props Create(DirectoryInfo stateDirectory, IActorRef jobStore, IActorRef launcher)

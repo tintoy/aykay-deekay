@@ -1,5 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Event;
 using Akka.Configuration;
 using AKDK.Actors;
 using System;
@@ -22,8 +23,8 @@ namespace AKDK.Examples.Orchestration
         static readonly Config AkkaConfig = ConfigurationFactory.ParseString(
             @"
                 akka {
-                    loglevel = DEBUG
-                    stdout-loglevel = DEBUG
+                    loglevel = INFO
+                    stdout-loglevel = INFO
                     suppress-json-serializer-warning = on
                     loggers = [ ""Akka.Event.StandardOutLogger"" ]
                 }
@@ -58,6 +59,7 @@ namespace AKDK.Examples.Orchestration
 
                     IActorRef app = system.ActorOf(actor =>
                     {
+                        ILoggingAdapter log = null;
                         IActorRef client = null;
                         IActorRef jobStore = null;
                         IActorRef launcher = null;
@@ -66,16 +68,18 @@ namespace AKDK.Examples.Orchestration
 
                         actor.OnPreStart = context =>
                         {
-                            Console.WriteLine("Connecting to Docker...");
+                            log = context.GetLogger();
+
+                            log.Info("Connecting to Docker...");
                             context.System.Docker().RequestConnectLocal(context.Self);
                         };
                         
                         actor.Receive<Connected>((connected, context) =>
                         {
-                            Console.WriteLine("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
+                            log.Info("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
                             client = connected.Client;
 
-                            Console.WriteLine("Initialising job store...");
+                            log.Info("Initialising job store...");
                             jobStore = context.ActorOf( // TODO: Decide on supervision strategy.
                                 JobStore.Create(Path.Combine(
                                     stateDirectory.FullName, "job-store.json"
@@ -89,15 +93,15 @@ namespace AKDK.Examples.Orchestration
                         });
                         actor.Receive<EventBusActor.Subscribed>((subscribed, context) =>
                         {
-                            Console.WriteLine("Job store initialised.");
+                            log.Info("Job store initialised.");
 
-                            Console.WriteLine("Initialising harvester...");
+                            log.Info("Initialising harvester...");
                             harvester = context.ActorOf(Props.Create(
                                 () => new Harvester(stateDirectory, jobStore)
                             ));
-                            Console.WriteLine("Harvester initialised.");
+                            log.Info("Harvester initialised.");
 
-                            Console.WriteLine("Initialising dispatcher...");
+                            log.Info("Initialising dispatcher...");
                             launcher = context.ActorOf(
                                 Props.Create(
                                     () => new Launcher(client)
@@ -114,39 +118,45 @@ namespace AKDK.Examples.Orchestration
                                 TimeSpan.FromSeconds(1)
                             );
 
-                            Console.WriteLine("Dispatcher initialised.");
+                            log.Info("Dispatcher initialised.");
 
-                            Console.WriteLine("Creating job...");
+                            log.Info("Creating job...");
                             jobStore.Tell(new JobStore.CreateJob(
-                                targetUrl: new Uri("https://www.google.com/")
+                                targetUrl: new Uri("https://ifconfig.co/json")
                             ));
                         });
                         actor.Receive<JobStoreEvents.JobCreated>((jobCreated, context) =>
                         {
-                            Console.WriteLine("Job {0} created.", jobCreated.Job.Id);
+                            log.Info("Job {0} created.", jobCreated.Job.Id);
                         });
                         actor.Receive<JobStoreEvents.JobStarted>((jobStarted, context) =>
                         {
-                            Console.WriteLine("Job {0} started.", jobStarted.Job.Id);
+                            log.Info("Job {0} started.", jobStarted.Job.Id);
+
+                            dispatcher.Tell(
+                                new Dispatcher.NotifyWhenAllJobsCompleted()
+                            );
                         });
                         actor.Receive<JobStoreEvents.JobCompleted>((jobStarted, context) =>
                         {
-                            Console.WriteLine("Job {0} completed successfully.", jobStarted.Job.Id);
+                            log.Info("Job {0} completed successfully.", jobStarted.Job.Id);
                             foreach (string jobMessage in jobStarted.Job.Messages)
-                                Console.WriteLine("\t{0}", jobMessage);
+                                log.Info("-- {0}", jobMessage);
 
-                            Console.WriteLine("\tContent:");
+                            log.Info("-- Content:");
 
                             foreach (string contentLine in (jobStarted.Job.Content ?? String.Empty).Split('\n'))
-                                Console.WriteLine("\t{0}", contentLine);
-
-                            completed.Set();
+                                log.Info("---- {0}", contentLine);
                         });
                         actor.Receive<JobStoreEvents.JobFailed>((jobStarted, context) =>
                         {
-                            Console.WriteLine("Job {0} failed.", jobStarted.Job.Id);
+                            log.Info("Job {0} failed.", jobStarted.Job.Id);
                             foreach (string jobMessage in jobStarted.Job.Messages)
-                                Console.WriteLine("\t{0}", jobMessage);
+                                log.Info("-- {0}", jobMessage);
+                        });
+                        actor.Receive<Dispatcher.AllJobsCompleted>((allJobsCompleted, context) =>
+                        {
+                            log.Info("All jobs completed.");
 
                             completed.Set();
                         });
@@ -154,10 +164,7 @@ namespace AKDK.Examples.Orchestration
                     }, name: "app");
 
                     completed.WaitOne();
-
-                    // TODO: Find a better way to wait for container clean-up (e.g. create a wait-handle for Launcher that signals when all processes have exited).
-                    Thread.Sleep(1000);
-
+                    
                     Console.WriteLine("Shutting down...");
                     system.Terminate().Wait();
                 }
