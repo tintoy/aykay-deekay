@@ -135,13 +135,17 @@ namespace AKDK.Examples.Orchestration.Actors
                         }
                         case JobStatus.Completed:
                         {
-                            // TODO: Define JobStoreEvents.JobCompleted message.
+                            _jobStoreEvents.Tell(new JobStoreEvents.JobCompleted(updateJob.CorrelationId,
+                                job: jobData.ToJob()
+                            ));
 
                             break;
                         }
                         case JobStatus.Failed:
                         {
-                            // TODO: Define JobStoreEvents.JobFailed message.
+                            _jobStoreEvents.Tell(new JobStoreEvents.JobFailed(updateJob.CorrelationId,
+                                job: jobData.ToJob()
+                            ));
 
                             break;
                         }
@@ -213,6 +217,9 @@ namespace AKDK.Examples.Orchestration.Actors
         /// </summary>
         void Persist()
         {
+            if (!_storeFile.Directory.Exists)
+                _storeFile.Directory.Create();
+
             using (StreamWriter storeWriter = _storeFile.CreateText())
             using (JsonTextWriter jsonWriter = new JsonTextWriter(storeWriter))
             {

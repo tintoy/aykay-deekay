@@ -2,9 +2,14 @@
 using AKDK.Actors;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.IO;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
+    // TODO: Need to stop relying on correlation Ids for process lookup (this is messy, implicit, and unreliable).
+    //       Instead, either use container Id or sender's ActorRef.
+
     /// <summary>
     ///     Actor that dispatches jobs and tracks their state.
     /// </summary>
@@ -12,14 +17,19 @@ namespace AKDK.Examples.Orchestration.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The default name for instances of the <see cref="Dispatcher"/> actor.
+        /// </summary>
+        public static readonly string ActorName = "dispatcher";
+
+        /// <summary>
         ///     Active jobs, keyed by message correlation Id.
         /// </summary>
         readonly Dictionary<string, Job>    _activeJobs = new Dictionary<string, Job>();
 
         /// <summary>
-        ///     <see cref="Process"/> actors for active jobs, keyed by job Id.
+        ///     
         /// </summary>
-        readonly Dictionary<int, IActorRef> _jobProcesses = new Dictionary<int, IActorRef>();
+        readonly DirectoryInfo              _stateDirectory;
 
         /// <summary>
         ///     A reference to the <see cref="JobStore"/> actor.
@@ -34,26 +44,38 @@ namespace AKDK.Examples.Orchestration.Actors
         /// <summary>
         ///     Create a new <see cref="Dispatcher"/>.
         /// </summary>
+        /// <param name="stateDirectory">
+        ///     The root directory for state directories that will be mounted into containers.
+        /// </param>
         /// <param name="jobStore">
         ///     A reference to the <see cref="JobStore"/> actor.
         /// </param>
         /// <param name="launcher">
         ///     A reference to the <see cref="Launcher"/> actor.
         /// </param>
-        public Dispatcher(IActorRef jobStore, IActorRef launcher)
+        public Dispatcher(DirectoryInfo stateDirectory, IActorRef jobStore, IActorRef launcher)
         {
+            if (stateDirectory == null)
+                throw new ArgumentNullException(nameof(stateDirectory));
+
             if (jobStore == null)
                 throw new ArgumentNullException(nameof(jobStore));
 
             if (launcher == null)
                 throw new ArgumentNullException(nameof(launcher));
 
+            _stateDirectory = stateDirectory;
             _jobStore = jobStore;
             _launcher = launcher;
 
             Receive<JobStoreEvents.JobCreated>(jobCreated =>
             {
-                // TODO: Start job using Launcher.
+                DirectoryInfo jobStateDirectory = _stateDirectory.CreateSubdirectory($"job-{jobCreated.Job.Id}");
+
+                Log.Info("Dispatcher is creating fetcher process for job {0} (host-side state directory is '{1}').",
+                    jobCreated.Job.Id,
+                    jobStateDirectory.FullName
+                );
 
                 _launcher.Tell(new Launcher.CreateProcess(
                     owner: Self,
@@ -64,7 +86,7 @@ namespace AKDK.Examples.Orchestration.Actors
                     },
                     volumeMounts: new Dictionary<string, string>
                     {
-                        // TODO: Create and mount state directory.
+                        [jobStateDirectory.FullName] = "/root/state"
                     },
                     correlationId: jobCreated.CorrelationId
                 ));
@@ -90,7 +112,6 @@ namespace AKDK.Examples.Orchestration.Actors
                 processCreated.Process.Tell(
                     new Process.Start(processCreated.CorrelationId)
                 );
-                _jobProcesses.Add(activeJob.Id, processCreated.Process);
             });
             Receive<Process.Started>(processStarted =>
             {
@@ -137,6 +158,8 @@ namespace AKDK.Examples.Orchestration.Actors
                         $"Job completed with exit code {processExited.ExitCode}."
                     }
                 ));
+
+                // TODO: Destroy process (container).
             });
         }
 
@@ -147,6 +170,9 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             base.PreStart();
 
+            if (!_stateDirectory.Exists)
+                _stateDirectory.Create();
+
             _jobStore.Tell(
                 new EventBusActor.Subscribe(Self, eventTypes: new Type[]
                 {
@@ -154,6 +180,22 @@ namespace AKDK.Examples.Orchestration.Actors
                 })
             );
             Context.Watch(_jobStore);
+        }
+
+        public static Props Create(DirectoryInfo stateDirectory, IActorRef jobStore, IActorRef launcher)
+        {
+            if (stateDirectory == null)
+                throw new ArgumentNullException(nameof(stateDirectory));
+
+            if (jobStore == null)
+                throw new ArgumentNullException(nameof(jobStore));
+
+            if (launcher == null)
+                throw new ArgumentNullException(nameof(launcher));
+
+            return Props.Create(
+                () => new Dispatcher(stateDirectory, jobStore, launcher)
+            );
         }
     }
 }

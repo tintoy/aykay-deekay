@@ -9,7 +9,8 @@ namespace AKDK.Examples.Orchestration.Actors
 {
     using Messages;
 
-    // TODO: Work out the best place to capture data from the state directory after the container is destroyed.
+    // TODO: Need to stop relying on correlation Ids for job lookup (this is messy, implicit, and unreliable).
+    //       Instead, either use job Id or sender's ActorRef.
 
     /// <summary>
     ///     Actor that launches and manages <see cref="Process"/>es.
@@ -17,6 +18,11 @@ namespace AKDK.Examples.Orchestration.Actors
     public partial class Launcher
         : ReceiveActorEx
     {
+        /// <summary>
+        ///     The default name for instances of the <see cref="Launcher"/> actor.
+        /// </summary>
+        public static readonly string ActorName = "launcher";
+
         /// <summary>
         ///     Processes, keyed by correlation Id.
         /// </summary>
@@ -79,7 +85,8 @@ namespace AKDK.Examples.Orchestration.Actors
                 ProcessInfo processInfo = _activeProcesses[containerCreated.CorrelationId];
                 processInfo.ContainerId = containerCreated.ContainerId;
                 processInfo.Process = Context.ActorOf(
-                    Process.Create(processInfo.Owner, _client, containerCreated.ContainerId)
+                    Process.Create(processInfo.Owner, _client, containerCreated.ContainerId),
+                    name: containerCreated.ContainerId
                 );
                 Context.Watch(processInfo.Process);
 

@@ -11,22 +11,30 @@ namespace AKDK.Examples.Orchestration.Actors
     ///     Actor that manages an instance of a Docker container.
     /// </summary>
     public partial class Process
-        : ReceiveActorEx
+        : ReceiveActorEx, IWithUnboundedStash
     {
         /// <summary>
         ///     The actor that owns the <see cref="Process"/>.
         /// </summary>
-        readonly IActorRef _owner;
+        readonly IActorRef  _owner;
 
         /// <summary>
         ///     A reference to the <see cref="Client"/> actor for the Docker API.
         /// </summary>
-        readonly IActorRef _client;
+        readonly IActorRef  _client;
 
         /// <summary>
         ///     The name or Id of the container managed by the <see cref="Process"/> actor.
         /// </summary>
-        readonly string _containerId;
+        readonly string     _containerId;
+
+        /// <summary>
+        ///     The message correlation Id used for notifications from the <see cref="Process"/>.
+        /// </summary>
+        /// <remarks>
+        ///     Captured when the <see cref="Start"/> message is received.
+        /// </remarks>
+        string     _correlationId;
 
         /// <summary>
         ///     Create a new <see cref="Process"/> actor.
@@ -57,19 +65,47 @@ namespace AKDK.Examples.Orchestration.Actors
         }
 
         /// <summary>
+        ///     The actor's message stash.
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        void Initializing()
+        {
+            Log.Debug("Process '{0}' initialising...", _containerId);
+
+            Receive<EventBusActor.Subscribed>(subscribed =>
+            {
+                Become(Created);
+            });
+            Receive<Start>(start =>
+            {
+                Stash.Stash();
+            });
+            ReceiveContainerEvent<DockerEvents.ContainerEvent>(containerEvent =>
+            {
+                Stash.Stash();
+            });
+        }
+
+        /// <summary>
         ///     Called when the process is first created.
         /// </summary>
         void Created()
         {
+            Log.Debug("Process '{0}' initialised.", _containerId);
+
+            Stash.UnstashAll();
+
             Receive<Start>(start =>
             {
+                _correlationId = start.CorrelationId;
                 _client.Tell(new StartContainer(_containerId,
                     correlationId: start.CorrelationId
                 ));
 
                 Become(Starting);
             });
-            Receive<DockerEvents.ContainerDestroyed>(containerDestroyed =>
+            ReceiveContainerEvent<DockerEvents.ContainerDestroyed>(containerDestroyed =>
             {
                 Log.Debug("Container '{0}' has been destroyed unexpectedly; management actor '{1}' will shut down.", _containerId, Self);
 
@@ -82,6 +118,8 @@ namespace AKDK.Examples.Orchestration.Actors
         /// </summary>
         void Starting()
         {
+            Log.Debug("Process '{0}' starting...", _containerId);
+
             Receive<Start>(start =>
             {
                 Sender.Tell(new OperationFailure(start.CorrelationId,
@@ -96,17 +134,28 @@ namespace AKDK.Examples.Orchestration.Actors
                     Self
                 );
 
-                _owner.Tell(new Started(containerStarted.CorrelationId,
+                _owner.Tell(new Started(_correlationId,
                     containerId: containerStarted.ContainerId
                 ));
 
                 Become(Running);
             });
+            Receive<ErrorResponse>(errorResponse =>
+            {
+                Log.Error(errorResponse.Reason, "Failed to start container '{0}': {1}",
+                    _containerId,
+                    errorResponse.Reason.Message
+                );
+
+                _owner.Forward(errorResponse);
+
+                Context.Stop(Self);
+            });
             ReceiveContainerEvent<DockerEvents.ContainerDied>(containerDied =>
             {
                 Log.Debug("Container '{0}' has terminated unexpectedly with exit code {1}.", _containerId, containerDied.ExitCode);
 
-                _owner.Tell(new Exited(containerDied.CorrelationId,
+                _owner.Tell(new Exited(_correlationId,
                     containerId: containerDied.ContainerId,
                     exitCode: containerDied.ExitCode
                 ));
@@ -126,6 +175,8 @@ namespace AKDK.Examples.Orchestration.Actors
         /// </summary>
         void Running()
         {
+            Log.Debug("Process '{0}' running...", _containerId);
+
             Receive<Start>(start =>
             {
                 Sender.Tell(new OperationFailure(start.CorrelationId,
@@ -137,7 +188,7 @@ namespace AKDK.Examples.Orchestration.Actors
             {
                 Log.Debug("Container '{0}' has terminated with exit code {1}.", _containerId, containerDied.ExitCode);
 
-                _owner.Tell(new Exited(containerDied.CorrelationId,
+                _owner.Tell(new Exited(_correlationId,
                     containerId: containerDied.ContainerId,
                     exitCode: containerDied.ExitCode
                 ));

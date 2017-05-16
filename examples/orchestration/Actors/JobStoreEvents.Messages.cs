@@ -85,5 +85,65 @@ namespace AKDK.Examples.Orchestration.Actors
             /// </summary>
             public Job Job { get; }
         }
+
+        /// <summary>
+        ///     Event raised when a job is completed.
+        /// </summary>
+        public class JobCompleted
+            : JobStoreEvent
+        {
+            /// <summary>
+            ///     Create a new <see cref="JobCompleted"/> event.
+            /// </summary>
+            /// <param name="correlationId">
+            ///     The event message correlation Id.
+            /// </param>
+            /// <param name="job">
+            ///     The job that was started.
+            /// </param>
+            public JobCompleted(string correlationId, Job job)
+                : base(correlationId)
+            {
+                if (job == null)
+                    throw new ArgumentNullException(nameof(job));
+
+                Job = job;
+            }
+
+            /// <summary>
+            ///     The job that was started.
+            /// </summary>
+            public Job Job { get; }
+        }
+
+        /// <summary>
+        ///     Event raised when a job has failed.
+        /// </summary>
+        public class JobFailed
+            : JobStoreEvent
+        {
+            /// <summary>
+            ///     Create a new <see cref="JobFailed"/> event.
+            /// </summary>
+            /// <param name="correlationId">
+            ///     The event message correlation Id.
+            /// </param>
+            /// <param name="job">
+            ///     The job that was started.
+            /// </param>
+            public JobFailed(string correlationId, Job job)
+                : base(correlationId)
+            {
+                if (job == null)
+                    throw new ArgumentNullException(nameof(job));
+
+                Job = job;
+            }
+
+            /// <summary>
+            ///     The job that was started.
+            /// </summary>
+            public Job Job { get; }
+        }
     }
 }

@@ -39,6 +39,11 @@ namespace AKDK.Examples.Orchestration
                 new SynchronizationContext()
             );
 
+            // All state data will be written to this directory.
+            DirectoryInfo stateDirectory = new DirectoryInfo(Path.Combine(
+                Directory.GetCurrentDirectory(), "_state"
+            ));
+
             ManualResetEvent completed = new ManualResetEvent(initialState: false);
             try
             {
@@ -53,15 +58,26 @@ namespace AKDK.Examples.Orchestration
 
                     IActorRef app = system.ActorOf(actor =>
                     {
-                        IActorRef jobStore = null;
                         IActorRef client = null;
+                        IActorRef jobStore = null;
+                        IActorRef launcher = null;
+                        IActorRef dispatcher = null;
 
                         actor.OnPreStart = context =>
                         {
+                            Console.WriteLine("Connecting to Docker...");
+                            context.System.Docker().RequestConnectLocal(context.Self);
+                        };
+                        
+                        actor.Receive<Connected>((connected, context) =>
+                        {
+                            Console.WriteLine("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
+                            client = connected.Client;
+
                             Console.WriteLine("Initialising job store...");
                             jobStore = context.ActorOf( // TODO: Decide on supervision strategy.
                                 JobStore.Create(Path.Combine(
-                                    Directory.GetCurrentDirectory(), "job-store.json"
+                                    stateDirectory.FullName, "job-store.json"
                                 ))
                             );
                             context.Watch(jobStore);
@@ -69,19 +85,29 @@ namespace AKDK.Examples.Orchestration
                             jobStore.Tell(
                                 new EventBusActor.Subscribe(context.Self)
                             );
-                        };
-
+                        });
                         actor.Receive<EventBusActor.Subscribed>((subscribed, context) =>
                         {
                             Console.WriteLine("Job store initialised.");
 
-                            Console.WriteLine("Connecting to Docker...");
-                            context.System.Docker().RequestConnectLocal(context.Self);
-                        });
-                        actor.Receive<Connected>((connected, context) =>
-                        {
-                            Console.WriteLine("Connected to Docker API (v{0}) at '{1}'.", connected.ApiVersion, connected.EndpointUri);
-                            client = connected.Client;
+                            Console.WriteLine("Initialising dispatcher...");
+                            launcher = context.ActorOf(
+                                Props.Create(
+                                    () => new Launcher(client)
+                                ),
+                                name: Launcher.ActorName
+                            );
+                            dispatcher = context.ActorOf(
+                                Dispatcher.Create(stateDirectory, jobStore, launcher),
+                                name: Dispatcher.ActorName
+                            );
+                            
+                            // Wait for the dispatcher to start.
+                            Thread.Sleep( // TODO: Find a better way.
+                                TimeSpan.FromSeconds(1)
+                            );
+
+                            Console.WriteLine("Dispatcher initialised.");
 
                             Console.WriteLine("Creating job...");
                             jobStore.Tell(new JobStore.CreateJob(
@@ -91,9 +117,28 @@ namespace AKDK.Examples.Orchestration
                         actor.Receive<JobStoreEvents.JobCreated>((jobCreated, context) =>
                         {
                             Console.WriteLine("Job {0} created.", jobCreated.Job.Id);
+                        });
+                        actor.Receive<JobStoreEvents.JobStarted>((jobStarted, context) =>
+                        {
+                            Console.WriteLine("Job {0} started.", jobStarted.Job.Id);
+                        });
+                        actor.Receive<JobStoreEvents.JobCompleted>((jobStarted, context) =>
+                        {
+                            Console.WriteLine("Job {0} completed successfully.", jobStarted.Job.Id);
+                            foreach (string jobMessage in jobStarted.Job.Messages)
+                                Console.WriteLine("\t{0}", jobMessage);
 
                             completed.Set();
                         });
+                        actor.Receive<JobStoreEvents.JobFailed>((jobStarted, context) =>
+                        {
+                            Console.WriteLine("Job {0} failed.", jobStarted.Job.Id);
+                            foreach (string jobMessage in jobStarted.Job.Messages)
+                                Console.WriteLine("\t{0}", jobMessage);
+
+                            completed.Set();
+                        });
+
                     }, name: "app");
 
                     completed.WaitOne();

@@ -32,6 +32,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fetcher", "fetcher", "{444E1A3E-AD33-48F2-BA09-EACCAC02DF9B}"
 	ProjectSection(SolutionItems) = preProject
 		examples\docker-images\fetcher\Dockerfile = examples\docker-images\fetcher\Dockerfile
+		examples\docker-images\fetcher\entrypoint.sh = examples\docker-images\fetcher\entrypoint.sh
 	EndProjectSection
 EndProject
 Global

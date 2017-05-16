@@ -51,10 +51,25 @@ namespace AKDK.Messages.DockerEvents
 		}
 	}
 
-	/// <summary>
+    /// <summary>
+    ///		Event raised when a container is started. 
+    /// </summary>
+	public class ContainerStarted
+        : ContainerEvent
+    {
+        /// <summary>
+        ///		Create a new <see cref="ContainerStarted"/> event model. 
+        /// </summary>
+        public ContainerStarted()
+            : base(DockerEventType.Start)
+        {
+        }
+    }
+
+    /// <summary>
     ///		Model for the event raised when a container has been terminated. 
     /// </summary>
-	public class ContainerDied
+    public class ContainerDied
 		: ContainerEvent
 	{
 		/// <summary>
