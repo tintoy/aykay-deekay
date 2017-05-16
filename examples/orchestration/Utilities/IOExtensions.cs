@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace AKDK.Examples.Orchestration.Utilities
@@ -57,6 +56,40 @@ namespace AKDK.Examples.Orchestration.Utilities
             return new FileInfo(Path.Combine(
                 directory.FullName, relativePath
             ));
+        }
+
+        /// <summary>
+        ///     Read all text from the specified file.
+        /// </summary>
+        /// <param name="file">
+        ///     The file.
+        /// </param>
+        /// <returns>
+        ///     The file content.
+        /// </returns>
+        public static string ReadAllText(this FileInfo file)
+        {
+            if (file == null)
+                throw new ArgumentNullException(nameof(file));
+
+            return File.ReadAllText(file.FullName);
+        }
+
+        /// <summary>
+        ///     Read all lines from the specified file.
+        /// </summary>
+        /// <param name="file">
+        ///     The file.
+        /// </param>
+        /// <returns>
+        ///     The file (as an array of lines).
+        /// </returns>
+        public static string[] ReadAllLines(this FileInfo file)
+        {
+            if (file == null)
+                throw new ArgumentNullException(nameof(file));
+
+            return File.ReadAllLines(file.FullName);
         }
     }
 }
