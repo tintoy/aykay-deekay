@@ -11,6 +11,7 @@ namespace AKDK.Examples.Orchestration
 {
     using Actors;
     using Messages;
+    using Utilities;
 
     /// <summary>
     ///     Example of using AK/DK to orchestrate Docker containers.
@@ -44,6 +45,8 @@ namespace AKDK.Examples.Orchestration
             DirectoryInfo stateDirectory = new DirectoryInfo(Path.Combine(
                 Directory.GetCurrentDirectory(), "_state"
             ));
+            if (!stateDirectory.Exists)
+                stateDirectory.Create();
 
             ManualResetEvent completed = new ManualResetEvent(initialState: false);
             try
@@ -81,9 +84,9 @@ namespace AKDK.Examples.Orchestration
 
                             log.Info("Initialising job store...");
                             jobStore = context.ActorOf( // TODO: Decide on supervision strategy.
-                                JobStore.Create(Path.Combine(
-                                    stateDirectory.FullName, "job-store.json"
-                                ))
+                                JobStore.Create(
+                                    stateDirectory.GetFile("job-store.json")
+                                )
                             );
                             context.Watch(jobStore);
 

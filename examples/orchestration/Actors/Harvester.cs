@@ -1,13 +1,12 @@
 ﻿using Akka.Actor;
 using AKDK.Actors;
-using AKDK.Messages;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
+    using Utilities;
+
     /// <summary>
     ///     Actor that collects output from completed jobs.
     /// </summary>
@@ -37,18 +36,14 @@ namespace AKDK.Examples.Orchestration.Actors
 
             Receive<JobStoreEvents.JobSucceeded>(jobSucceeded =>
             {
-                DirectoryInfo jobStateDirectory = new DirectoryInfo(Path.Combine(
-                    _stateDirectory.FullName, $"job-{jobSucceeded.Job.Id}"
-                ));
+                DirectoryInfo jobStateDirectory = _stateDirectory.GetSubDirectory($"job-{jobSucceeded.Job.Id}");
 
                 Log.Info("Harvesting output for job {0} from '{1}'...",
                     jobSucceeded.Job.Id,
                     jobStateDirectory.FullName
                 );
 
-                FileInfo contentFile = new FileInfo(Path.Combine(
-                    jobStateDirectory.FullName, "content.txt"
-                ));
+                FileInfo contentFile = jobStateDirectory.GetFile("content.txt");
                 if (!contentFile.Exists)
                 {
                     Log.Warning("Cannot find content file '{0}' for job {1}.",

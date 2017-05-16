@@ -58,12 +58,12 @@ namespace AKDK.Examples.Orchestration.Actors
         /// <param name="storeFile">
         ///     The name of the file used to persist job store data.
         /// </param>
-        public JobStore(string storeFile)
+        public JobStore(FileInfo storeFile)
         {
-            if (String.IsNullOrWhiteSpace(storeFile))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(storeFile)}.", nameof(storeFile));
+            if (storeFile == null)
+                throw new ArgumentNullException(nameof(storeFile));
 
-            _storeFile = new FileInfo(storeFile);
+            _storeFile = storeFile;
         }
 
         /// <summary>
@@ -212,11 +212,11 @@ namespace AKDK.Examples.Orchestration.Actors
         /// <param name="storeFile">
         ///     The name of the file used to persist job store data.
         /// </param>
-        public static Props Create(string storeFile)
+        public static Props Create(FileInfo storeFile)
         {
-            if (String.IsNullOrWhiteSpace(storeFile))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(storeFile)}.", nameof(storeFile));
-
+            if (storeFile == null)
+                throw new ArgumentNullException(nameof(storeFile));
+            
             return Props.Create(
                 () => new JobStore(storeFile)
             );
