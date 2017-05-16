@@ -47,17 +47,19 @@ namespace AKDK.Examples.Orchestration.Actors
         public class UpdateJob
             : CorrelatedMessage
         {
-            public UpdateJob(int jobId, JobStatus status, IEnumerable<string> appendMessages = null, string correlationId = null)
+            public UpdateJob(int jobId, JobStatus status, IEnumerable<string> appendMessages = null, string content = null, string correlationId = null)
                 : base(correlationId)
             {
                 JobId = jobId;
                 Status = status;
                 AppendMessages = appendMessages != null ? ImmutableList.CreateRange(appendMessages) : ImmutableList<string>.Empty;
+                Content = content;
             }
 
             public int JobId { get; }
             public JobStatus Status { get; }
             public ImmutableList<string> AppendMessages { get; }
+            public string Content { get; }
         }
     }
 }

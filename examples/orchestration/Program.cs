@@ -22,8 +22,8 @@ namespace AKDK.Examples.Orchestration
         static readonly Config AkkaConfig = ConfigurationFactory.ParseString(
             @"
                 akka {
-                    loglevel = INFO
-                    stdout-loglevel = INFO
+                    loglevel = DEBUG
+                    stdout-loglevel = DEBUG
                     suppress-json-serializer-warning = on
                     loggers = [ ""Akka.Event.StandardOutLogger"" ]
                 }
@@ -61,6 +61,7 @@ namespace AKDK.Examples.Orchestration
                         IActorRef client = null;
                         IActorRef jobStore = null;
                         IActorRef launcher = null;
+                        IActorRef harvester = null;
                         IActorRef dispatcher = null;
 
                         actor.OnPreStart = context =>
@@ -89,6 +90,12 @@ namespace AKDK.Examples.Orchestration
                         actor.Receive<EventBusActor.Subscribed>((subscribed, context) =>
                         {
                             Console.WriteLine("Job store initialised.");
+
+                            Console.WriteLine("Initialising harvester...");
+                            harvester = context.ActorOf(Props.Create(
+                                () => new Harvester(stateDirectory, jobStore)
+                            ));
+                            Console.WriteLine("Harvester initialised.");
 
                             Console.WriteLine("Initialising dispatcher...");
                             launcher = context.ActorOf(
@@ -128,6 +135,11 @@ namespace AKDK.Examples.Orchestration
                             foreach (string jobMessage in jobStarted.Job.Messages)
                                 Console.WriteLine("\t{0}", jobMessage);
 
+                            Console.WriteLine("\tContent:");
+
+                            foreach (string contentLine in (jobStarted.Job.Content ?? String.Empty).Split('\n'))
+                                Console.WriteLine("\t{0}", contentLine);
+
                             completed.Set();
                         });
                         actor.Receive<JobStoreEvents.JobFailed>((jobStarted, context) =>
@@ -142,6 +154,9 @@ namespace AKDK.Examples.Orchestration
                     }, name: "app");
 
                     completed.WaitOne();
+
+                    // TODO: Find a better way to wait for container clean-up (e.g. create a wait-handle for Launcher that signals when all processes have exited).
+                    Thread.Sleep(1000);
 
                     Console.WriteLine("Shutting down...");
                     system.Terminate().Wait();

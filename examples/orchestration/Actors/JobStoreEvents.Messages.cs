@@ -87,21 +87,21 @@ namespace AKDK.Examples.Orchestration.Actors
         }
 
         /// <summary>
-        ///     Event raised when a job is completed.
+        ///     Event raised when a job succeeded.
         /// </summary>
-        public class JobCompleted
+        public class JobSucceeded
             : JobStoreEvent
         {
             /// <summary>
-            ///     Create a new <see cref="JobCompleted"/> event.
+            ///     Create a new <see cref="JobSucceeded"/> event.
             /// </summary>
             /// <param name="correlationId">
             ///     The event message correlation Id.
             /// </param>
             /// <param name="job">
-            ///     The job that was started.
+            ///     The job that succeeded.
             /// </param>
-            public JobCompleted(string correlationId, Job job)
+            public JobSucceeded(string correlationId, Job job)
                 : base(correlationId)
             {
                 if (job == null)
@@ -129,9 +129,39 @@ namespace AKDK.Examples.Orchestration.Actors
             ///     The event message correlation Id.
             /// </param>
             /// <param name="job">
-            ///     The job that was started.
+            ///     The job that failed.
             /// </param>
             public JobFailed(string correlationId, Job job)
+                : base(correlationId)
+            {
+                if (job == null)
+                    throw new ArgumentNullException(nameof(job));
+
+                Job = job;
+            }
+
+            /// <summary>
+            ///     The job that was started.
+            /// </summary>
+            public Job Job { get; }
+        }
+
+        /// <summary>
+        ///     Event raised when a job is completed.
+        /// </summary>
+        public class JobCompleted
+            : JobStoreEvent
+        {
+            /// <summary>
+            ///     Create a new <see cref="JobCompleted"/> event.
+            /// </summary>
+            /// <param name="correlationId">
+            ///     The event message correlation Id.
+            /// </param>
+            /// <param name="job">
+            ///     The job that was started.
+            /// </param>
+            public JobCompleted(string correlationId, Job job)
                 : base(correlationId)
             {
                 if (job == null)

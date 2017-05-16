@@ -71,6 +71,7 @@ namespace AKDK.Examples.Orchestration
 
             Id = id;
             TargetUrl = targetUrl;
+            Content = content;
             Messages = messages;
         }
 
@@ -196,15 +197,21 @@ namespace AKDK.Examples.Orchestration
         Active = 3,
 
         /// <summary>
-        ///     Job completed successfully.
+        ///     Job executed successfully.
         /// </summary>
-        [EnumMember(Value = "completed")]
-        Completed = 4,
+        [EnumMember(Value = "succeeded")]
+        Succeeded = 4,
 
         /// <summary>
         ///     Job execution failed.
         /// </summary>
         [EnumMember(Value = "failed")]
-        Failed = 5
-	}
+        Failed = 5,
+
+        /// <summary>
+        ///     Job completed successfully.
+        /// </summary>
+        [EnumMember(Value = "completed")]
+        Completed = 6,
+    }
 }

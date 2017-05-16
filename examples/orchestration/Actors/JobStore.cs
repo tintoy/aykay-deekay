@@ -107,11 +107,13 @@ namespace AKDK.Examples.Orchestration.Actors
                 }
 
                 bool statusChange = updateJob.Status != jobData.Status;
-                if (!statusChange && updateJob.AppendMessages.Count == 0)
+                if (!statusChange && updateJob.AppendMessages.Count == 0 && updateJob.Content == null)
                     return; // Nothing to do.
 
                 jobData.Status = updateJob.Status;
                 jobData.Messages.AddRange(updateJob.AppendMessages);
+                if (updateJob.Content != null)
+                    jobData.Content = updateJob.Content;
 
                 Persist();
 
@@ -133,9 +135,9 @@ namespace AKDK.Examples.Orchestration.Actors
 
                             break;
                         }
-                        case JobStatus.Completed:
+                        case JobStatus.Succeeded:
                         {
-                            _jobStoreEvents.Tell(new JobStoreEvents.JobCompleted(updateJob.CorrelationId,
+                            _jobStoreEvents.Tell(new JobStoreEvents.JobSucceeded(updateJob.CorrelationId,
                                 job: jobData.ToJob()
                             ));
 
@@ -144,6 +146,14 @@ namespace AKDK.Examples.Orchestration.Actors
                         case JobStatus.Failed:
                         {
                             _jobStoreEvents.Tell(new JobStoreEvents.JobFailed(updateJob.CorrelationId,
+                                job: jobData.ToJob()
+                            ));
+
+                            break;
+                        }
+                        case JobStatus.Completed:
+                        {
+                            _jobStoreEvents.Tell(new JobStoreEvents.JobCompleted(updateJob.CorrelationId,
                                 job: jobData.ToJob()
                             ));
 

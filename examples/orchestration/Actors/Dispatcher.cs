@@ -27,7 +27,12 @@ namespace AKDK.Examples.Orchestration.Actors
         readonly Dictionary<string, Job>    _activeJobs = new Dictionary<string, Job>();
 
         /// <summary>
-        ///     
+        ///     <see cref="Process"/>es for active jobs, keyed by job Id.
+        /// </summary>
+        readonly Dictionary<int, IActorRef> _jobProcesses = new Dictionary<int, IActorRef>();
+
+        /// <summary>
+        ///     The directory containing job-specific state directories.
         /// </summary>
         readonly DirectoryInfo              _stateDirectory;
 
@@ -107,6 +112,8 @@ namespace AKDK.Examples.Orchestration.Actors
                     return;
                 }
 
+                _jobProcesses.Add(activeJob.Id, processCreated.Process);
+
                 Log.Info("Starting container '{0}' for job '{1}'...", processCreated.ContainerId, activeJob.Id);
 
                 processCreated.Process.Tell(
@@ -152,14 +159,50 @@ namespace AKDK.Examples.Orchestration.Actors
                 }
 
                 _jobStore.Tell(new JobStore.UpdateJob(activeJob.Id,
-                    status: processExited.ExitCode == 0 ? JobStatus.Completed : JobStatus.Failed,
+                    status: processExited.ExitCode == 0 ? JobStatus.Succeeded : JobStatus.Failed,
                     appendMessages: new string[]
                     {
                         $"Job completed with exit code {processExited.ExitCode}."
                     }
                 ));
+            });
+            Receive<JobStoreEvents.JobCompleted>(jobCompleted =>
+            {
+                // TODO: Stop relying on correlation Id (redesign active-job tables around Job Id and Sender).
+                Job activeJob = _activeJobs.Values.FirstOrDefault(
+                    job => job.Id == jobCompleted.Job.Id
+                );
+                if (activeJob == null)
+                {
+                    Log.Warning("Received unexpected JobCompleted notification from '{0}' (JobId = {1}, CorrelationId = {2}).",
+                        Sender,
+                        jobCompleted.Job.Id,
+                        jobCompleted.CorrelationId
+                    );
 
-                // TODO: Destroy process (container).
+                    Unhandled(jobCompleted);
+
+                    return;
+                }
+
+                IActorRef jobProcess;
+                if (!_jobProcesses.TryGetValue(activeJob.Id, out jobProcess))
+                {
+                    Log.Warning("Cannot find process for job {0} (CorrelationId = {1}).",
+                        activeJob.Id,
+                        jobCompleted.CorrelationId
+                    );
+
+                    Unhandled(jobCompleted);
+
+                    return;
+                }
+
+                Log.Info("Cleaning up job {0}...", activeJob.Id);
+
+                jobProcess.Tell(
+                    new Process.Destroy(jobCompleted.CorrelationId)
+                );
             });
         }
 
@@ -176,7 +219,8 @@ namespace AKDK.Examples.Orchestration.Actors
             _jobStore.Tell(
                 new EventBusActor.Subscribe(Self, eventTypes: new Type[]
                 {
-                    typeof(JobStoreEvents.JobCreated)
+                    typeof(JobStoreEvents.JobCreated),
+                    typeof(JobStoreEvents.JobCompleted)
                 })
             );
             Context.Watch(_jobStore);

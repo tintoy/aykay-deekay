@@ -46,5 +46,29 @@ namespace AKDK.Examples.Orchestration.Actors
             public string ContainerId { get; }
             public int ExitCode { get; }
         }
+
+        public class Destroy
+            : CorrelatedMessage
+        {
+            public Destroy(string correlationId)
+                : base(correlationId)
+            {
+            }
+        }
+
+        public class Destroyed
+            : CorrelatedMessage
+        {
+            public Destroyed(string correlationId, string containerId)
+                : base(correlationId)
+            {
+                if (String.IsNullOrWhiteSpace(containerId))
+                    throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(containerId)}.", nameof(containerId));
+
+                ContainerId = containerId;
+            }
+
+            public string ContainerId { get; }
+        }
     }
 }

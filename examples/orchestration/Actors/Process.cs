@@ -127,6 +127,14 @@ namespace AKDK.Examples.Orchestration.Actors
                     reason: new InvalidOperationException("Process is already running.")
                 ));
             });
+            Receive<Destroy>(destroy =>
+            {
+                _client.Tell(new RemoveContainer(_containerId,
+                    correlationId: destroy.CorrelationId
+                ));
+
+                Become(Destroying);
+            });
             Receive<ContainerStarted>(containerStarted =>
             {
                 Log.Debug("Container '{0}' started for process '{1}'.",
@@ -184,6 +192,13 @@ namespace AKDK.Examples.Orchestration.Actors
                     reason: new InvalidOperationException("Process is already running.")
                 ));
             });
+            Receive<Destroy>(destroy =>
+            {
+                Sender.Tell(new OperationFailure(destroy.CorrelationId,
+                    operationName: "Destroy Process",
+                    reason: new InvalidOperationException("Process is still running.")
+                ));
+            });
             ReceiveContainerEvent<DockerEvents.ContainerDied>(containerDied =>
             {
                 Log.Debug("Container '{0}' has terminated with exit code {1}.", _containerId, containerDied.ExitCode);
@@ -208,11 +223,53 @@ namespace AKDK.Examples.Orchestration.Actors
         /// </summary>
         void Completed()
         {
-            ReceiveContainerEvent<DockerEvents.ContainerDestroyed>(containerDestroyed =>
+            Receive<Start>(start =>
+            {
+                Sender.Tell(new OperationFailure(start.CorrelationId,
+                    operationName: "Start Process",
+                    reason: new InvalidOperationException("Process is already running.")
+                ));
+            });
+            Receive<Destroy>(destroy =>
+            {
+                _client.Tell(new RemoveContainer(_containerId,
+                    correlationId: destroy.CorrelationId
+                ));
+
+                Become(Destroying);
+            });
+        }
+
+        /// <summary>
+        ///     Called when the process is being destroyed.
+        /// </summary>
+        void Destroying()
+        {
+            Log.Debug("Container '{0}' is being destroyed...", _containerId);
+
+            Receive<ContainerRemoved>(containerRemoved =>
             {
                 Log.Debug("Container '{0}' has been destroyed; management actor '{1}' will shut down.", _containerId, Self);
 
+                _owner.Tell(new Destroyed(containerRemoved.CorrelationId,
+                    containerId: _containerId
+                ));
+
                 Context.Stop(Self);
+            });
+            Receive<Start>(start =>
+            {
+                Sender.Tell(new OperationFailure(start.CorrelationId,
+                    operationName: "Start Process",
+                    reason: new InvalidOperationException("Process is already running.")
+                ));
+            });
+            Receive<Destroy>(destroy =>
+            {
+                Sender.Tell(new OperationFailure(destroy.CorrelationId,
+                    operationName: "Destroy Process",
+                    reason: new InvalidOperationException("Process is still running.")
+                ));
             });
         }
 

@@ -34,7 +34,7 @@ namespace AKDK.Messages.DockerEvents.Converters
             [DockerEventType.Create] = typeof(ContainerCreated),
             [DockerEventType.Start] = typeof(ContainerStarted),
             [DockerEventType.Die] = typeof(ContainerDied),
-            [DockerEventType.Destroy] = typeof(ContainerRemoved),
+            [DockerEventType.Destroy] = typeof(ContainerDestroyed),
         });
 
         /// <summary>
