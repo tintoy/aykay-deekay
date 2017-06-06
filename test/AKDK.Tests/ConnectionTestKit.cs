@@ -2,11 +2,12 @@
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
+using System;
+using Xunit.Abstractions;
 
 namespace AKDK.Tests
 {
     using Actors;
-    using System.Runtime.CompilerServices;
 
     /// <summary>
     ///     The base class for actor tests that require a simulated <see cref="Connection"/> actor.
@@ -24,6 +25,29 @@ namespace AKDK.Tests
             .WithFallback(DefaultConfig);
 
         /// <summary>
+        ///     Create The Akka configuration (with logging) used by the tests.
+        /// </summary>
+        /// <param name="output">
+        ///     The <see cref="ITestOutputHelper"/> for the current test.
+        /// </param>
+        /// <returns>
+        ///     The configuration.
+        /// </returns>
+        protected static Config TestConfigWithLogger(ITestOutputHelper output)
+        {
+            Guid testId = TestOutputLogger.RegisterTestOutput(output);
+
+            Config loggerConfig = ConfigurationFactory.ParseString($@"
+                akdk.test.test_id = ""{testId}""
+                akka.loggers = [ ""AKDK.Tests.TestOutputLogger,AKDK.Tests"" ]
+
+                akka.suppress-json-serializer-warning = on
+            ");
+
+            return loggerConfig.WithFallback(DefaultConfig);
+        }
+
+        /// <summary>
         ///     Create a new <see cref="ConnectionTestKit"/>.
         /// </summary>
         /// <param name="actorSystemName">
@@ -31,6 +55,18 @@ namespace AKDK.Tests
         /// </param>
         protected ConnectionTestKit(string actorSystemName)
             : base(TestConfig, actorSystemName)
+        {
+            ConnectionTestProbe = CreateTestProbe(name: "connection");
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="ConnectionTestKit"/>.
+        /// </summary>
+        /// <param name="actorSystemName">
+        ///     The name of the actor system used to host the tests.
+        /// </param>
+        protected ConnectionTestKit(string actorSystemName, ITestOutputHelper output)
+            : base(TestConfigWithLogger(output), actorSystemName, output)
         {
             ConnectionTestProbe = CreateTestProbe(name: "connection");
         }

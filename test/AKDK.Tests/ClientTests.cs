@@ -2,6 +2,7 @@
 using Docker.DotNet.Models;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace AKDK.Tests
 {
@@ -14,8 +15,8 @@ namespace AKDK.Tests
     public class ClientTests
         : ConnectionTestKit
     {
-        public ClientTests()
-            : base(actorSystemName: "client-tests")
+        public ClientTests(ITestOutputHelper testOutput)
+            : base(actorSystemName: "client-tests", output: testOutput)
         {
         }
 
