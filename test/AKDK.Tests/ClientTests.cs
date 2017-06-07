@@ -32,7 +32,7 @@ namespace AKDK.Tests
         {
             IActorRef client = CreateClient();
             client.Tell(
-                new ListImages(new ImagesListParameters(),
+                new ListImages(
                     correlationId: nameof(ListImages_Success)
                 )
             );

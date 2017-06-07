@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 namespace AKDK.Actors
 {
     using Messages;
+    using Utilities;
 
     /// <summary>
     ///     Actor that aggregates a <see cref="Connection"/>, providing a public surface for the Docker API.
@@ -72,7 +73,13 @@ namespace AKDK.Actors
             {
                 var executeCommand = new Connection.ExecuteCommand(listImages, async (dockerClient, cancellationToken) =>
                 {
-                    IList<ImagesListResponse> images = await dockerClient.Images.ListImagesAsync(listImages.Parameters);
+                    var parameters = new ImagesListParameters
+                    {
+                        MatchName = listImages.MatchName,
+                        All = listImages.All,
+                        Filters = listImages.Filters.ToMutable()
+                    };
+                    IList<ImagesListResponse> images = await dockerClient.Images.ListImagesAsync(parameters);
 
                     return new ImageList(listImages.CorrelationId, images);
                 });

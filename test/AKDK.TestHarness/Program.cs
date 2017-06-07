@@ -84,9 +84,9 @@ namespace AKDK.TestHarness
                             Console.WriteLine("Subscribed to Docker event bus.");
 
                             Console.WriteLine("Requesting image list...");
-                            client.Tell(new ListImages(
-                                new ImagesListParameters { All = true }
-                            ));
+                            client.Tell(
+                                new ListImages(all: true)
+                            );
                         });
                         actor.Receive<DockerEvent>((dockerEvent, context) =>
                         {
