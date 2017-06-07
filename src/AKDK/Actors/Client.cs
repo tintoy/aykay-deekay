@@ -103,6 +103,19 @@ namespace AKDK.Actors
 
                 _connection.Tell(executeCommand, Sender);
             });
+            Receive<StopContainer>(stopContainer =>
+            {
+                var executeCommand = new Connection.ExecuteCommand(stopContainer, async (dockerClient, cancellationToken) =>
+                {
+                    bool containerWasStopped = await dockerClient.Containers.StopContainerAsync(stopContainer.ContainerId, stopContainer.Parameters, cancellationToken);
+
+                    return new ContainerStopped(stopContainer.CorrelationId, stopContainer.ContainerId,
+                        alreadyStopped: !containerWasStopped
+                    );
+                });
+
+                _connection.Tell(executeCommand, Sender);
+            });
             Receive<RemoveContainer>(removeContainer =>
             {
                 var executeCommand = new Connection.ExecuteCommand(removeContainer, async (dockerClient, cancellationToken) =>

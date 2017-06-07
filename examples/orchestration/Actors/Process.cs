@@ -1,6 +1,7 @@
 ﻿using Akka.Actor;
 using AKDK.Actors;
 using AKDK.Messages;
+using Docker.DotNet.Models;
 using System;
 
 using DockerEvents = AKDK.Messages.DockerEvents;
@@ -81,6 +82,14 @@ namespace AKDK.Examples.Orchestration.Actors
             {
                 Stash.Stash();
             });
+            Receive<Stop>(stop =>
+            {
+                Stash.Stash();
+            });
+            Receive<Destroy>(destroy =>
+            {
+                Stash.Stash();
+            });
             ReceiveContainerEvent<DockerEvents.ContainerEvent>(containerEvent =>
             {
                 Stash.Stash();
@@ -104,6 +113,13 @@ namespace AKDK.Examples.Orchestration.Actors
                 ));
 
                 Become(Starting);
+            });
+            Receive<Stop>(stop =>
+            {
+                Sender.Tell(new OperationFailure(stop.CorrelationId,
+                    operationName: "Kill Process",
+                    reason: new InvalidOperationException("Process is not running.")
+                ));
             });
             ReceiveContainerEvent<DockerEvents.ContainerDestroyed>(containerDestroyed =>
             {
@@ -134,6 +150,20 @@ namespace AKDK.Examples.Orchestration.Actors
                 ));
 
                 Become(Destroying);
+            });
+            Receive<Stop>(stop =>
+            {
+                Log.Debug("Stopping container '{0}' for process '{1}'.",
+                    _containerId,
+                    Self
+                );
+
+                _client.Tell(new StopContainer(_containerId,
+                    parameters: new ContainerStopParameters { WaitBeforeKillSeconds = 30 },
+                    correlationId: stop.CorrelationId
+                ));
+
+                Become(Stopping);
             });
             Receive<ContainerStarted>(containerStarted =>
             {
@@ -192,6 +222,19 @@ namespace AKDK.Examples.Orchestration.Actors
                     reason: new InvalidOperationException("Process is already running.")
                 ));
             });
+            Receive<Stop>(stop =>
+            {
+                Log.Debug("Stopping container '{0}' for process '{1}'.",
+                    _containerId,
+                    Self
+                );
+
+                _client.Tell(new StopContainer(_containerId,
+                    correlationId: stop.CorrelationId
+                ));
+
+                Become(Stopping);
+            });
             Receive<Destroy>(destroy =>
             {
                 Sender.Tell(new OperationFailure(destroy.CorrelationId,
@@ -215,6 +258,61 @@ namespace AKDK.Examples.Orchestration.Actors
                 Log.Debug("Container '{0}' has been destroyed unexpectedly; management actor '{1}' will shut down.", _containerId, Self);
 
                 Context.Stop(Self);
+            });
+        }
+
+        /// <summary>
+        ///     Called when the process is stopping.
+        /// </summary>
+        void Stopping()
+        {
+            Receive<ContainerStopped>(containerStopped =>
+            {
+                Log.Debug("Container '{0}' stopped for process '{1}'.",
+                    containerStopped.ContainerId,
+                    Self
+                );
+
+                _owner.Tell(new Stopped(_correlationId,
+                    containerId: containerStopped.ContainerId
+                ));
+            });
+            Receive<ErrorResponse>(errorResponse =>
+            {
+                Log.Error(errorResponse.Reason, "Failed to stop container '{0}': {1}",
+                    _containerId,
+                    errorResponse.Reason.Message
+                );
+
+                _owner.Forward(errorResponse);
+
+                Context.Stop(Self);
+            });
+            ReceiveContainerEvent<DockerEvents.ContainerDied>(containerDied =>
+            {
+                Log.Debug("Container '{0}' has terminated with exit code {1}.", _containerId, containerDied.ExitCode);
+
+                _owner.Tell(new Exited(_correlationId,
+                    containerId: containerDied.ContainerId,
+                    exitCode: containerDied.ExitCode
+                ));
+
+                Become(Completed);
+            });
+
+            Receive<Start>(start =>
+            {
+                Sender.Tell(new OperationFailure(start.CorrelationId,
+                    operationName: "Start Process",
+                    reason: new InvalidOperationException("Process is still stopping.")
+                ));
+            });
+            Receive<Destroy>(destroy =>
+            {
+                Sender.Tell(new OperationFailure(destroy.CorrelationId,
+                    operationName: "Destroy Process",
+                    reason: new InvalidOperationException("Process is still stopping.")
+                ));
             });
         }
 

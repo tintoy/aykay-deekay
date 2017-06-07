@@ -70,5 +70,26 @@ namespace AKDK.Examples.Orchestration.Actors
 
             public string ContainerId { get; }
         }
+
+        public class Stop
+            : CorrelatedMessage
+        {
+            public Stop(string correlationId = null)
+                : base(correlationId)
+            {
+            }
+        }
+
+        public class Stopped
+            : CorrelatedMessage
+        {
+            public Stopped(string correlationId, string containerId)
+                : base(correlationId)
+            {
+                ContainerId = containerId;
+            }
+
+            public string ContainerId { get; }
+        }
     }
 }
