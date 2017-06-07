@@ -56,27 +56,9 @@ namespace AKDK.Examples.Orchestration.Actors
                 _activeProcesses.Add(processInfo.CorrelationId, processInfo);
 
                 _client.Tell(new CreateContainer(
-                    parameters: new CreateContainerParameters
-                    {
-                        Image = launch.ImageName,
-                        Env = launch.EnvironmentVariables
-                            .Select(
-                                environmentVariable => $"{environmentVariable.Key}={environmentVariable.Value}"
-                            )
-                            .ToList(),
-                        HostConfig = new HostConfig
-                        {
-                            Binds = launch.VolumeMounts
-                                .Select(
-                                    volumeMount => $"{volumeMount.Key}:{volumeMount.Value}"
-                                )
-                                .ToList(),
-                            LogConfig = new LogConfig
-                            {
-                                Type = "json-file"
-                            }
-                        }
-                    },
+                    image: launch.ImageName,
+                    environmentVariables: launch.EnvironmentVariables,
+                    binds: launch.Binds,
                     correlationId: processInfo.CorrelationId
                 ));
             });

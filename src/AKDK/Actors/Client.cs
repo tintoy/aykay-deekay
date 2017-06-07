@@ -3,7 +3,7 @@ using Docker.DotNet.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace AKDK.Actors
 {
@@ -90,7 +90,43 @@ namespace AKDK.Actors
             {
                 var executeCommand = new Connection.ExecuteCommand(createContainer, async (dockerClient, cancellationToken) =>
                 {
-                    CreateContainerResponse response = await dockerClient.Containers.CreateContainerAsync(createContainer.Parameters);
+                    var parameters = new CreateContainerParameters
+                    {
+                        Image = createContainer.Image,
+                        Name = createContainer.Name,
+                        AttachStdout = createContainer.AttachStdOut,
+                        AttachStderr = createContainer.AttachStdErr,
+                        AttachStdin = createContainer.AttachStdIn,
+                        Tty = createContainer.TTY,
+                        HostConfig = new HostConfig
+                        {
+                            // Hard-coded for now.
+                            LogConfig = new LogConfig
+                            {
+                                Type = createContainer.LogType
+                            }
+                        }
+
+                        // TODO: Add other parameters.
+                    };
+                    if (createContainer.EnvironmentVariables.Count > 0)
+                    {
+                        parameters.Env = createContainer.EnvironmentVariables
+                            .Select(
+                                environmentVariable => $"{environmentVariable.Key}={environmentVariable.Value}"
+                            )
+                            .ToList();
+                    }
+                    if (createContainer.Binds.Count > 0)
+                    {
+                        parameters.HostConfig.Binds = createContainer.Binds
+                            .Select(
+                                bind => $"{bind.Key}:{bind.Value}"
+                            )
+                            .ToList();
+                    }
+
+                    CreateContainerResponse response = await dockerClient.Containers.CreateContainerAsync(parameters);
 
                     return new ContainerCreated(createContainer.CorrelationId, response);
                 });

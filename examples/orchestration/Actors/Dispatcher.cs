@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using System.Collections.Immutable;
 
 namespace AKDK.Examples.Orchestration.Actors
 {
@@ -125,11 +126,11 @@ namespace AKDK.Examples.Orchestration.Actors
                     environmentVariables: new Dictionary<string, string>
                     {
                         ["TARGET_URL"] = jobCreated.Job.TargetUrl.AbsoluteUri
-                    },
-                    volumeMounts: new Dictionary<string, string>
+                    }.ToImmutableDictionary(),
+                    binds: new Dictionary<string, string>
                     {
                         [jobStateDirectory.FullName] = "/root/state"
-                    },
+                    }.ToImmutableDictionary(),
                     correlationId: jobCreated.CorrelationId
                 ));
                 _activeJobs.Add(jobCreated.CorrelationId, jobCreated.Job);

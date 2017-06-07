@@ -121,9 +121,11 @@ namespace AKDK.TestHarness
                             // Needed if you want to get logs from the API ("journald" logger is also supported).
                             createContainerParameters.UseJsonFileLogger();
 
-                            client.Tell(
-                                new CreateContainer(createContainerParameters)
-                            );
+                            client.Tell(new CreateContainer(imageName,
+                                attachStdOut: true,
+                                attachStdErr: true,
+                                tty: false
+                            ));
                         });
                         actor.Receive<ContainerCreated>((containerCreated, context) =>
                         {

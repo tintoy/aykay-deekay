@@ -29,8 +29,8 @@ namespace AKDK.Examples.Orchestration.Actors
             /// <param name="environmentVariables">
             ///     Environment variables (if any) passed to the process container.
             /// </param>
-            /// <param name="volumeMounts">
-            ///     Volumes (if any) to mount in the process container.
+            /// <param name="binds">
+            ///     Paths (if any) to bind-mount in the process container.
             /// </param>
             /// <param name="entryPoint">
             ///     The command (if any) to act as the container entry-point.
@@ -38,7 +38,7 @@ namespace AKDK.Examples.Orchestration.Actors
             /// <param name="correlationId">
             ///     An optional message correlation Id.
             /// </param>
-            public CreateProcess(IActorRef owner, string imageName, IReadOnlyDictionary<string, string> environmentVariables = null, IReadOnlyDictionary<string, string> volumeMounts = null, string entryPoint = null, string correlationId = null)
+            public CreateProcess(IActorRef owner, string imageName, ImmutableDictionary<string, string> environmentVariables = null, ImmutableDictionary<string, string> binds = null, string entryPoint = null, string correlationId = null)
                 : base(correlationId)
             {
                 if (owner == null)
@@ -49,8 +49,8 @@ namespace AKDK.Examples.Orchestration.Actors
 
                 Owner = owner;
                 ImageName = imageName;
-                EnvironmentVariables = environmentVariables != null ? ImmutableDictionary.CreateRange(environmentVariables) : ImmutableDictionary<string, string>.Empty;
-                VolumeMounts = environmentVariables != null ? ImmutableDictionary.CreateRange(volumeMounts) : ImmutableDictionary<string, string>.Empty;
+                EnvironmentVariables = environmentVariables ?? ImmutableDictionary<string, string>.Empty;
+                Binds = binds ?? ImmutableDictionary<string, string>.Empty;
                 EntryPoint = entryPoint;
             }
 
@@ -73,12 +73,12 @@ namespace AKDK.Examples.Orchestration.Actors
             public ImmutableDictionary<string, string> EnvironmentVariables { get; }
 
             /// <summary>
-            ///     Volumes (if any) to mount in the process container.
+            ///     Paths (if any) to bind-mount in the process container.
             /// </summary>
             /// <remarks>
             ///     Format is ["HostPath"] = "ContainerPath".
             /// </remarks>
-            public ImmutableDictionary<string, string> VolumeMounts { get; }
+            public ImmutableDictionary<string, string> Binds { get; }
 
             /// <summary>
             ///     The command (if any) to act as the container entry-point.
