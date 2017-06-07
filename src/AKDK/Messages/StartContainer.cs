@@ -1,5 +1,4 @@
-﻿using Docker.DotNet.Models;
-using System;
+﻿using System;
 
 namespace AKDK.Messages
 {
@@ -15,20 +14,20 @@ namespace AKDK.Messages
         /// <param name="containerId">
         ///		The name or Id of the container to start.
         /// </param>
-        /// <param name="parameters">
-        ///     Optional <see cref="ContainerStartParameters"/> that control operation behaviour.
+        /// <param name="detachKeys">
+        ///     Optional key sequence used to detach from the container.
         /// </param>
         /// <param name="correlationId">
         ///		An optional message correlation Id (if not specified, a random value will be assigned to the request).
         /// </param>
-        public StartContainer(string containerId, ContainerStartParameters parameters = null, string correlationId = null)
+        public StartContainer(string containerId, string detachKeys = null, string correlationId = null)
             : base(correlationId)
         {
             if (String.IsNullOrWhiteSpace(containerId))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(containerId)}.", nameof(containerId));
 
             ContainerId = containerId;
-            Parameters = parameters ?? new ContainerStartParameters();
+            DetachKeys = detachKeys;
         }
 
         /// <summary>
@@ -37,9 +36,9 @@ namespace AKDK.Messages
         public string ContainerId { get; }
 
         /// <summary>
-        ///     <see cref="ContainerStartParameters"/> that control operation behaviour.
+        ///     Optional key sequence used to detach from the container.
         /// </summary>
-        public ContainerStartParameters Parameters { get; }
+        public string DetachKeys { get; }
 
         /// <summary>
         ///     A short name for the operation represented by the request.

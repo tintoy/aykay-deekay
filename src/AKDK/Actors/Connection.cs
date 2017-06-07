@@ -202,6 +202,8 @@ namespace AKDK.Actors
                 );
                 CancelRequest(inFlightRequest);
 
+                // TODO: Reply with RequestCancelled or OperationFailed.
+
                 if (inFlightRequest.ResponseStreamer != null)
                 {
                     Context.Unwatch(inFlightRequest.ResponseStreamer);

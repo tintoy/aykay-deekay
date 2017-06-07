@@ -15,20 +15,20 @@ namespace AKDK.Messages
         /// <param name="containerId">
         ///		The name or Id of the container to stop.
         /// </param>
-        /// <param name="parameters">
+        /// <param name="waitBeforeKillSeconds">
         ///     Optional <see cref="ContainerStopParameters"/> that control operation behaviour.
         /// </param>
         /// <param name="correlationId">
         ///		An optional message correlation Id (if not specified, a random value will be assigned to the request).
         /// </param>
-        public StopContainer(string containerId, ContainerStopParameters parameters = null, string correlationId = null)
+        public StopContainer(string containerId, uint? waitBeforeKillSeconds = null, string correlationId = null)
             : base(correlationId)
         {
             if (String.IsNullOrWhiteSpace(containerId))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(containerId)}.", nameof(containerId));
 
             ContainerId = containerId;
-            Parameters = parameters ?? new ContainerStopParameters();
+            WaitBeforeKillSeconds = waitBeforeKillSeconds;
         }
 
         /// <summary>
@@ -37,9 +37,9 @@ namespace AKDK.Messages
         public string ContainerId { get; }
 
         /// <summary>
-        ///     <see cref="ContainerStopParameters"/> that control operation behaviour.
+        ///     An optional number of seconds to wait for the container to stop before killing it.
         /// </summary>
-        public ContainerStopParameters Parameters { get; }
+        public uint? WaitBeforeKillSeconds { get; }
 
         /// <summary>
         ///     A short name for the operation represented by the request.

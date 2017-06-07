@@ -159,7 +159,7 @@ namespace AKDK.Examples.Orchestration.Actors
                 );
 
                 _client.Tell(new StopContainer(_containerId,
-                    parameters: new ContainerStopParameters { WaitBeforeKillSeconds = 30 },
+                    waitBeforeKillSeconds: 30,
                     correlationId: stop.CorrelationId
                 ));
 

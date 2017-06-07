@@ -101,7 +101,11 @@ namespace AKDK.Actors
             {
                 var executeCommand = new Connection.ExecuteCommand(startContainer, async (dockerClient, cancellationToken) =>
                 {
-                    bool containerWasStarted = await dockerClient.Containers.StartContainerAsync(startContainer.ContainerId, startContainer.Parameters);
+                    ContainerStartParameters parameters = new ContainerStartParameters
+                    {
+                        DetachKeys = startContainer.DetachKeys
+                    };
+                    bool containerWasStarted = await dockerClient.Containers.StartContainerAsync(startContainer.ContainerId, parameters);
 
                     return new ContainerStarted(startContainer.CorrelationId, startContainer.ContainerId,
                         alreadyStarted: !containerWasStarted
@@ -114,7 +118,11 @@ namespace AKDK.Actors
             {
                 var executeCommand = new Connection.ExecuteCommand(stopContainer, async (dockerClient, cancellationToken) =>
                 {
-                    bool containerWasStopped = await dockerClient.Containers.StopContainerAsync(stopContainer.ContainerId, stopContainer.Parameters, cancellationToken);
+                    var parameters = new ContainerStopParameters
+                    {
+                        WaitBeforeKillSeconds = stopContainer.WaitBeforeKillSeconds
+                    };
+                    bool containerWasStopped = await dockerClient.Containers.StopContainerAsync(stopContainer.ContainerId, parameters, cancellationToken);
 
                     return new ContainerStopped(stopContainer.CorrelationId, stopContainer.ContainerId,
                         alreadyStopped: !containerWasStopped
