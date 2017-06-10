@@ -26,6 +26,9 @@ namespace AKDK.Messages
         /// <param name="binds">
         ///     Paths (if any) to bind-mount into the container.
         /// </param>
+        /// <param name="ports">
+        ///     Ports (if any) to expose from the container.
+        /// </param>
         /// <param name="attachStdOut">
         ///     Attach STDOUT to the container?
         /// </param>
@@ -44,7 +47,7 @@ namespace AKDK.Messages
         /// <param name="correlationId">
         ///		An optional message correlation Id (if not specified, a random value will be assigned to the request).
         /// </param>
-        public CreateContainer(string image, string name = null, ImmutableDictionary<string, string> environmentVariables = null, ImmutableDictionary<string, string> binds = null, bool attachStdOut = false, bool attachStdErr = false, bool attachStdIn = false, bool tty = false, string logType = "json-file", string correlationId = null)
+        public CreateContainer(string image, string name = null, ImmutableDictionary<string, string> environmentVariables = null, ImmutableDictionary<string, string> binds = null, ImmutableDictionary<string, string> ports = null, bool attachStdOut = false, bool attachStdErr = false, bool attachStdIn = false, bool tty = false, string logType = "json-file", string correlationId = null)
             : base(correlationId)
         {
             if (String.IsNullOrWhiteSpace(image))
@@ -57,6 +60,7 @@ namespace AKDK.Messages
             Name = name;
             EnvironmentVariables = environmentVariables ?? ImmutableDictionary<string, string>.Empty;
             Binds = binds ?? ImmutableDictionary<string, string>.Empty;
+            Ports = ports ?? ImmutableDictionary<string, string>.Empty;
             AttachStdOut = attachStdOut;
             AttachStdErr = attachStdErr;
             AttachStdIn = attachStdIn;
@@ -92,6 +96,14 @@ namespace AKDK.Messages
         ///     Format is ["HostPath"] = "ContainerPath".
         /// </remarks>
         public ImmutableDictionary<string, string> Binds { get; }
+
+        /// <summary>
+        ///     Ports (if any) to expose from the container.
+        /// </summary>
+        /// <remarks>
+        ///     Format is ["HostPort"] = "ContainerPort".
+        /// </remarks>
+        public ImmutableDictionary<string, string> Ports { get; }
 
         /// <summary>
         ///     Attach STDOUT to the container?

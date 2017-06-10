@@ -125,6 +125,13 @@ namespace AKDK.Actors
                             )
                             .ToList();
                     }
+                    if (createContainer.Ports.Count > 0)
+                    {
+                        parameters.ExposedPorts = createContainer.Ports.ToDictionary(
+                            port => port.Key,
+                            port => (object)port.Value
+                        );
+                    }
 
                     CreateContainerResponse response = await dockerClient.Containers.CreateContainerAsync(parameters);
 
