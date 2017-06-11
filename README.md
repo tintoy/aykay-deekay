@@ -8,6 +8,4 @@ To see what you can do with AK/DK, have a look at the [orchestration engine](exa
 
 ---
 
-Note - this is a work-in-progress.
-
-Please feel free to open an issue for questions for feedback; I'm off hiking from May 17th to June 6th 2017 (so apologies in advance if I'm slow to reply), but when I get back it'll be full steam ahead :)
+Note - this is a work-in-progress; please feel free to open an issue for questions, feedback, or if you'd like to pitch in! :)
