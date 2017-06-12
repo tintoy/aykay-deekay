@@ -19,9 +19,19 @@ namespace AKDK.Examples.Orchestration.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The default timeout period when waiting for a job process.
+        /// </summary>
+        public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30); // TODO: Make this configurable.
+
+        /// <summary>
         ///     A reference to the <see cref="Launcher"/> actor used to create the job's associated process.
         /// </summary>
         readonly IActorRef  _launcher;
+
+        /// <summary>
+        ///     A reference to the <see cref="Harvester2"/> actor used to harvest content from completed job processes.
+        /// </summary>
+        readonly IActorRef  _harvester;
 
         /// <summary>
         ///     The actor that requested execution of the current job.
@@ -47,29 +57,40 @@ namespace AKDK.Examples.Orchestration.Actors
         ///     The process (if any) representing the current job.
         /// </summary>
         IActorRef           _process;
-        
+
+        /// <summary>
+        ///     Cancellation for the pending timeout message (if any).
+        /// </summary>
+        ICancelable         _timeoutCancellation;
+
         /// <summary>
         ///     Create a new <see cref="JobWorker"/>.
         /// </summary>
         /// <param name="launcher">
         ///     A reference to the <see cref="Launcher"/> actor used to create the job's associated process.
         /// </param>
-        /// <param name="harvesterProps">
-        ///     <see cref="Props"/> used to create the <see cref="Harvester"/> that collects the job output.
+        /// <param name="harvester">
+        ///     A reference to the <see cref="Harvester2"/> actor used to harvest content from completed job processes.
         /// </param>
-        public JobWorker(IActorRef launcher)
+        public JobWorker(IActorRef launcher, IActorRef harvester)
         {
             if (launcher == null)
                 throw new ArgumentNullException(nameof(launcher));
-            
+
+            if (harvester == null)
+                throw new ArgumentNullException(nameof(harvester));
+
             _launcher = launcher;
             Context.Watch(launcher); // If launcher crashes, so do we.
-            
+
+            _harvester = harvester;
+            Context.Watch(_harvester); // If launcher crashes, so do we.
+
             Become(Ready);
         }
 
         /// <summary>
-        ///     Called when the actor is ready to handle requests.
+        ///     Called when the worker is ready to handle requests.
         /// </summary>
         void Ready()
         {
@@ -78,12 +99,14 @@ namespace AKDK.Examples.Orchestration.Actors
             _job = null;
             _jobStateDirectory = null;
             _process = null;
+            _timeoutCancellation = null;
 
             Receive<ExecuteJob>(executeJob =>
             {
                 _requestor = Sender;
                 _requestCorrelationId = executeJob.CorrelationId;
                 _job = executeJob.Job.WithStatus(JobStatus.Pending);
+                _jobStateDirectory = executeJob.JobStateDirectory;
                 _launcher.Tell(new Launcher.CreateProcess(
                     owner: Self,
                     imageName: "fetcher",
@@ -98,13 +121,19 @@ namespace AKDK.Examples.Orchestration.Actors
                     correlationId: _requestCorrelationId
                 ));
 
-                Become(Launching);
+                Become(ProcessLaunching);
             });
         }
 
-        void Launching()
+        /// <summary>
+        ///     Called when the worker is launching the job process.
+        /// </summary>
+        void ProcessLaunching()
         {
-            // TODO: Implement launch timeout.
+            _timeoutCancellation = ScheduleTellSelfOnceCancelable(
+                delay: DefaultTimeout,
+                message: ProcessLaunchTimeout.Instance
+            );
 
             Receive<Launcher.ProcessCreated>(processCreated =>
             {
@@ -117,12 +146,19 @@ namespace AKDK.Examples.Orchestration.Actors
             });
             Receive<Process.Started>(processStarted =>
             {
+                _timeoutCancellation.Cancel();
+                _timeoutCancellation = null;
+
                 _job = _job.WithStatus(JobStatus.Active);
                 _requestor.Tell(
                     new JobExecuting(_job, _jobStateDirectory, processStarted.CorrelationId)
                 );
 
-                Become(Running);
+                Become(ProcessRunning);
+            });
+            Receive<ProcessLaunchTimeout>(_ =>
+            {
+                Log.Error("Timed out waiting for process launch.");
             });
             Receive<Terminated>(terminated =>
             {
@@ -138,20 +174,31 @@ namespace AKDK.Examples.Orchestration.Actors
             });
         }
 
-        void Running()
+        /// <summary>
+        ///     Called when the job process is running.
+        /// </summary>
+        void ProcessRunning()
         {
             Receive<Process.Exited>(processExited =>
             {
                 JobStatus jobStatus = processExited.ExitCode == 0 ? JobStatus.Succeeded : JobStatus.Failed;
                 _job = _job.WithStatus(jobStatus, $"Job completed with exit code {processExited.ExitCode}.");
-
                 _requestor.Tell(
-                    new JobExecuted(_job, _jobStateDirectory, processExited.CorrelationId)
+                    new JobExecuting(_job, _jobStateDirectory, processExited.CorrelationId)
                 );
 
                 Context.Unwatch(_process);
 
-                Become(Ready);
+                // TODO: Decide whether harvesting is appropriate when process exit code is non-zero.
+                //       This would make much more sense if harvesting also included program output.
+
+                _harvester.Tell(new Harvester2.Harvest(
+                    containerId: processExited.ContainerId,
+                    stateDirectory: _jobStateDirectory,
+                    correlationId: _requestCorrelationId
+                ));
+
+                Become(ProcessHarvesting);
             });
             Receive<Terminated>(terminated =>
             {
@@ -164,6 +211,52 @@ namespace AKDK.Examples.Orchestration.Actors
 
                     Become(Ready);
                 }
+            });
+        }
+
+        /// <summary>
+        ///     Called when content is being harvested from the current job's process container.
+        /// </summary>
+        void ProcessHarvesting()
+        {
+            _timeoutCancellation = ScheduleTellSelfOnceCancelable(
+                delay: DefaultTimeout,
+                message: ContainerHarvestTimeout.Instance
+            );
+
+            Receive<Harvester2.Harvested>(harvested =>
+            {
+                _job = _job.WithContent(harvested.Content).WithStatus(JobStatus.Completed);
+
+                _requestor.Tell(
+                    new JobExecuted(_job, _jobStateDirectory, _requestCorrelationId)
+                );
+            });
+            Receive<Harvester2.HarvestFailed>(harvestFailed =>
+            {
+                Log.Error(harvestFailed.Reason, "Failed to harvest content for job {0}.", _job.Id);
+
+                _job = _job.WithStatus(JobStatus.Failed,
+                    "Unexpected error while harvesting content: " + harvestFailed.Reason.Message
+                );
+
+                _requestor.Tell(
+                    new JobExecuted(_job, _jobStateDirectory, _requestCorrelationId)
+                );
+            });
+            Receive<ContainerHarvestTimeout>(_ =>
+            {
+                Log.Error("Timed out waiting for container harvest.");
+
+                _job = _job.WithStatus(JobStatus.Failed,
+                    "Job timed out while harvesting content."
+                );
+
+                _requestor.Tell(
+                    new JobExecuted(_job, _jobStateDirectory, _requestCorrelationId)
+                );
+
+                Become(Ready);
             });
         }
     }

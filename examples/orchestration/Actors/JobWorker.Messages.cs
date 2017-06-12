@@ -137,5 +137,41 @@ namespace AKDK.Examples.Orchestration.Actors
             /// </summary>
             public DirectoryInfo JobStateDirectory { get; }
         }
+
+        /// <summary>
+        ///     Message indicating that the timeout period expired before a job process was launched.
+        /// </summary>
+        internal class ProcessLaunchTimeout
+        {
+            /// <summary>
+            ///     The singleton instance of the <see cref="ProcessLaunchTimeout"/> message.
+            /// </summary>
+            public static readonly ProcessLaunchTimeout Instance = new ProcessLaunchTimeout();
+
+            /// <summary>
+            ///     Create a new <see cref="ProcessLaunchTimeout"/> message.
+            /// </summary>
+            ProcessLaunchTimeout()
+            {
+            }
+        }
+
+        /// <summary>
+        ///     Message indicating that the timeout period expired before a container's content was harvested.
+        /// </summary>
+        internal class ContainerHarvestTimeout
+        {
+            /// <summary>
+            ///     The singleton instance of the <see cref="ContainerHarvestTimeout"/> message.
+            /// </summary>
+            public static readonly ContainerHarvestTimeout Instance = new ContainerHarvestTimeout();
+
+            /// <summary>
+            ///     Create a new <see cref="ContainerHarvestTimeout"/> message.
+            /// </summary>
+            ContainerHarvestTimeout()
+            {
+            }
+        }
     }
 }

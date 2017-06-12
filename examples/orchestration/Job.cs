@@ -209,7 +209,7 @@ namespace AKDK.Examples.Orchestration
         Failed = 5,
 
         /// <summary>
-        ///     Job completed successfully.
+        ///     Job completed.
         /// </summary>
         [EnumMember(Value = "completed")]
         Completed = 6,
