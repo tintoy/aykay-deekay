@@ -132,7 +132,7 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             _timeoutCancellation = ScheduleTellSelfOnceCancelable(
                 delay: DefaultTimeout,
-                message: ProcessLaunchTimeout.Instance
+                message: LaunchTimeout.Instance
             );
 
             Receive<Launcher.ProcessCreated>(processCreated =>
@@ -156,7 +156,7 @@ namespace AKDK.Examples.Orchestration.Actors
 
                 Become(ProcessRunning);
             });
-            Receive<ProcessLaunchTimeout>(_ =>
+            Receive<LaunchTimeout>(_ =>
             {
                 Log.Error("Timed out waiting for process launch.");
             });
@@ -221,7 +221,7 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             _timeoutCancellation = ScheduleTellSelfOnceCancelable(
                 delay: DefaultTimeout,
-                message: ContainerHarvestTimeout.Instance
+                message: HarvestTimeout.Instance
             );
 
             Receive<Harvester2.Harvested>(harvested =>
@@ -244,7 +244,7 @@ namespace AKDK.Examples.Orchestration.Actors
                     new JobExecuted(_job, _jobStateDirectory, _requestCorrelationId)
                 );
             });
-            Receive<ContainerHarvestTimeout>(_ =>
+            Receive<HarvestTimeout>(_ =>
             {
                 Log.Error("Timed out waiting for container harvest.");
 

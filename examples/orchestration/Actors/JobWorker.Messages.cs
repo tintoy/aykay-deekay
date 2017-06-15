@@ -141,17 +141,17 @@ namespace AKDK.Examples.Orchestration.Actors
         /// <summary>
         ///     Message indicating that the timeout period expired before a job process was launched.
         /// </summary>
-        internal class ProcessLaunchTimeout
+        internal class LaunchTimeout
         {
             /// <summary>
-            ///     The singleton instance of the <see cref="ProcessLaunchTimeout"/> message.
+            ///     The singleton instance of the <see cref="LaunchTimeout"/> message.
             /// </summary>
-            public static readonly ProcessLaunchTimeout Instance = new ProcessLaunchTimeout();
+            public static readonly LaunchTimeout Instance = new LaunchTimeout();
 
             /// <summary>
-            ///     Create a new <see cref="ProcessLaunchTimeout"/> message.
+            ///     Create a new <see cref="LaunchTimeout"/> message.
             /// </summary>
-            ProcessLaunchTimeout()
+            LaunchTimeout()
             {
             }
         }
@@ -159,17 +159,17 @@ namespace AKDK.Examples.Orchestration.Actors
         /// <summary>
         ///     Message indicating that the timeout period expired before a container's content was harvested.
         /// </summary>
-        internal class ContainerHarvestTimeout
+        internal class HarvestTimeout
         {
             /// <summary>
-            ///     The singleton instance of the <see cref="ContainerHarvestTimeout"/> message.
+            ///     The singleton instance of the <see cref="HarvestTimeout"/> message.
             /// </summary>
-            public static readonly ContainerHarvestTimeout Instance = new ContainerHarvestTimeout();
+            public static readonly HarvestTimeout Instance = new HarvestTimeout();
 
             /// <summary>
-            ///     Create a new <see cref="ContainerHarvestTimeout"/> message.
+            ///     Create a new <see cref="HarvestTimeout"/> message.
             /// </summary>
-            ContainerHarvestTimeout()
+            HarvestTimeout()
             {
             }
         }

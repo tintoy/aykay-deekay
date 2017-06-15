@@ -56,17 +56,5 @@ namespace AKDK.Examples.Orchestration.Actors
                 ));
             });
         }
-
-        protected override void PreStart()
-        {
-            base.PreStart();
-
-            Context.Watch(_jobStore);
-
-            _jobStore.Tell(new EventBusActor.Subscribe(Self, eventTypes: new Type[]
-            {
-                typeof(JobStoreEvents.JobSucceeded)
-            }));
-        }
     }
 }

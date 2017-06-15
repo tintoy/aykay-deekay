@@ -115,6 +115,8 @@ namespace AKDK.Examples.Orchestration.Actors
             {
                 DirectoryInfo jobStateDirectory = _stateDirectory.CreateSubdirectory($"job-{jobCreated.Job.Id}");
 
+                // TODO: Create JobWorker and tell it to execute the job.
+
                 Log.Info("Dispatcher is creating fetcher process for job {0} (host-side state directory is '{1}').",
                     jobCreated.Job.Id,
                     jobStateDirectory.FullName
