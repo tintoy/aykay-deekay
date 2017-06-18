@@ -106,7 +106,7 @@ namespace AKDK.Examples.Orchestration.Actors
                 _requestor = Sender;
                 _requestCorrelationId = executeJob.CorrelationId;
                 _job = executeJob.Job.WithStatus(JobStatus.Pending);
-                _jobStateDirectory = executeJob.JobStateDirectory;
+                _jobStateDirectory = executeJob.StateDirectory;
                 _launcher.Tell(new Launcher.CreateProcess(
                     owner: Self,
                     imageName: "fetcher",
@@ -116,7 +116,7 @@ namespace AKDK.Examples.Orchestration.Actors
                     }.ToImmutableDictionary(),
                     binds: new Dictionary<string, string>
                     {
-                        [executeJob.JobStateDirectory.FullName] = "/root/state"
+                        [executeJob.StateDirectory.FullName] = "/root/state"
                     }.ToImmutableDictionary(),
                     correlationId: _requestCorrelationId
                 ));
@@ -132,7 +132,7 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             _timeoutCancellation = ScheduleTellSelfOnceCancelable(
                 delay: DefaultTimeout,
-                message: LaunchTimeout.Instance
+                message: new LaunchTimeout(_job.Id)
             );
 
             Receive<Launcher.ProcessCreated>(processCreated =>
@@ -221,7 +221,7 @@ namespace AKDK.Examples.Orchestration.Actors
         {
             _timeoutCancellation = ScheduleTellSelfOnceCancelable(
                 delay: DefaultTimeout,
-                message: HarvestTimeout.Instance
+                message: new HarvestTimeout(_job.Id)
             );
 
             Receive<Harvester2.Harvested>(harvested =>

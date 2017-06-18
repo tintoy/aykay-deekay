@@ -25,20 +25,20 @@ namespace AKDK.Examples.Orchestration.Actors
             /// <param name="targetUrl">
             ///     The target URL to fetch.
             /// </param>
-            /// <param name="jobStateDirectory">
+            /// <param name="stateDirectory">
             ///     The directory used to hold the job's state.
             /// </param>
             /// <param name="correlationId">
             ///     An optional message-correlation Id.
             /// </param>
-            public ExecuteJob(Job job, DirectoryInfo jobStateDirectory, string correlationId = null)
+            public ExecuteJob(Job job, DirectoryInfo stateDirectory, string correlationId = null)
                 : base(correlationId)
             {
                 if (job == null)
                     throw new ArgumentNullException(nameof(job));
 
                 Job = job;
-                JobStateDirectory = jobStateDirectory;
+                StateDirectory = stateDirectory;
             }
 
             /// <summary>
@@ -54,7 +54,7 @@ namespace AKDK.Examples.Orchestration.Actors
             /// <summary>
             ///     The directory used to hold the job's state.
             /// </summary>
-            public DirectoryInfo JobStateDirectory { get; }
+            public DirectoryInfo StateDirectory { get; }
         }
 
         /// <summary>
@@ -144,16 +144,19 @@ namespace AKDK.Examples.Orchestration.Actors
         internal class LaunchTimeout
         {
             /// <summary>
-            ///     The singleton instance of the <see cref="LaunchTimeout"/> message.
-            /// </summary>
-            public static readonly LaunchTimeout Instance = new LaunchTimeout();
-
-            /// <summary>
             ///     Create a new <see cref="LaunchTimeout"/> message.
             /// </summary>
-            LaunchTimeout()
+            /// <param name="jobId">
+            ///     The Id of the job for which a launch timeout occurred.
+            /// </param>
+            public LaunchTimeout(int jobId)
             {
             }
+
+            /// <summary>
+            ///     The Id of the job for which a launch timeout occurred.
+            /// </summary>
+            public int JobId { get; set; }
         }
 
         /// <summary>
@@ -162,16 +165,19 @@ namespace AKDK.Examples.Orchestration.Actors
         internal class HarvestTimeout
         {
             /// <summary>
-            ///     The singleton instance of the <see cref="HarvestTimeout"/> message.
-            /// </summary>
-            public static readonly HarvestTimeout Instance = new HarvestTimeout();
-
-            /// <summary>
             ///     Create a new <see cref="HarvestTimeout"/> message.
             /// </summary>
-            HarvestTimeout()
+            /// <param name="jobId">
+            ///     The Id of the job for which a harvest timeout occurred.
+            /// </param>
+            public HarvestTimeout(int jobId)
             {
             }
+
+            /// <summary>
+            ///     The Id of the job for which a harvest timeout occurred.
+            /// </summary>
+            public int JobId { get; set; }
         }
     }
 }

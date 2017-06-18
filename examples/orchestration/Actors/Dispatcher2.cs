@@ -18,6 +18,16 @@ namespace AKDK.Examples.Orchestration.Actors
         ///     The default name for instances of the <see cref="Dispatcher2"/> actor.
         /// </summary>
         public static readonly string ActorName = "Dispatcher2";
+
+        /// <summary>
+        ///     References to <see cref="Job"/>s, keyed by job Id.
+        /// </summary>
+        readonly Dictionary<int, Job>       _jobs = new Dictionary<int, Job>();
+
+        /// <summary>
+        ///     Jobs, keyed by references to <see cref="JobWorker"/> actors.
+        /// </summary>
+        readonly Dictionary<IActorRef, Job> _jobWorkers = new Dictionary<IActorRef, Job>();
         
         /// <summary>
         ///     The directory containing job-specific state directories.
@@ -100,25 +110,122 @@ namespace AKDK.Examples.Orchestration.Actors
 
             Receive<JobStoreEvents.JobCreated>(jobCreated =>
             {
+                Job job = jobCreated.Job;
+                _jobs.Add(job.Id, job);
+
                 DirectoryInfo jobStateDirectory = _stateDirectory.CreateSubdirectory($"job-{jobCreated.Job.Id}");
 
-                // TODO: Create JobWorker and tell it to execute the job.
+                IActorRef worker = Context.ActorOf(Props.Create(
+                    () => new JobWorker(_launcher, _harvester)
+                ));
+                Context.Watch(worker);
+                _jobWorkers.Add(worker, job);
+
+                worker.Tell(
+                    new JobWorker.ExecuteJob(job,
+                        stateDirectory: jobStateDirectory,
+                        correlationId: jobCreated.CorrelationId
+                    )
+                );
             });
             Receive<JobWorker.JobExecuting>(jobExecuting =>
             {
-                // TODO: Update status for target job.
+                Job updatedJob = jobExecuting.Job;
+                
+                Job existingJob;
+                if (!_jobs.TryGetValue(updatedJob.Id, out existingJob))
+                {
+                    Log.Warning("Received unexpected JobExecuting ({JobStatus}) notification for job {JobId} from {Worker}",
+                        updatedJob.Status,
+                        updatedJob.Id,
+                        Sender
+                    );
+
+                    return;
+                }
+
+                _jobs[updatedJob.Id] = jobExecuting.Job;
+
+                _jobStore.Tell(new JobStore.UpdateJob(updatedJob.Id,
+                    status: updatedJob.Status,
+                    appendMessages: updatedJob.Messages.Skip(existingJob.Messages.Count),
+                    correlationId: jobExecuting.CorrelationId
+                ));
             });
             Receive<JobWorker.JobExecuted>(jobExecuted =>
             {
-                // TODO: Update status and clear state for target job.
+                Job updatedJob = jobExecuted.Job;
+                
+                Job existingJob;
+                if (!_jobs.TryGetValue(updatedJob.Id, out existingJob))
+                {
+                    Log.Warning("Received unexpected JobExecuted ({JobStatus}) notification for job {JobId} from {Worker}",
+                        updatedJob.Status,
+                        updatedJob.Id,
+                        Sender
+                    );
+
+                    return;
+                }
+
+                _jobs.Remove(existingJob.Id);
+                _jobWorkers.Remove(Sender);
+                _jobStore.Tell(new JobStore.UpdateJob(updatedJob.Id,
+                    status: updatedJob.Status,
+                    content: updatedJob.Content,
+                    appendMessages: updatedJob.Messages.Skip(existingJob.Messages.Count),
+                    correlationId: jobExecuted.CorrelationId
+                ));
             });
             Receive<JobWorker.LaunchTimeout>(launchTimeout =>
             {
-                // TODO: Update status and clear state for target job.
+                if (!_jobWorkers.ContainsKey(Sender))
+                {
+                    Log.Warning("Received unexpected LaunchTimeout notification from worker {Worker} (no job associated with this worker).", Sender);
+
+                    return;
+                }
+
+                Job existingJob;
+                if (!_jobs.TryGetValue(launchTimeout.JobId, out existingJob))
+                {
+                    Log.Warning("Received unexpected LaunchTimeout notification from worker {Worker} (the dispatcher has no knowledge of job {JobId}).", Sender, launchTimeout.JobId);
+
+                    return;
+                }
+
+                _jobStore.Tell(new JobStore.UpdateJob(existingJob.Id,
+                    status: JobStatus.Failed,
+                    appendMessages: new string[] { "Timed out waiting for the job process to launch." }
+                ));
+
+                _jobs.Remove(existingJob.Id);
+                _jobWorkers.Remove(Sender);
             });
             Receive<JobWorker.HarvestTimeout>(harvestTimeout =>
             {
-                // TODO: Update status and clear state for target job.
+                if (!_jobWorkers.ContainsKey(Sender))
+                {
+                    Log.Warning("Received unexpected HarvestTimeout notification from worker {Worker} (no job associated with this worker).", Sender);
+
+                    return;
+                }
+
+                Job existingJob;
+                if (!_jobs.TryGetValue(harvestTimeout.JobId, out existingJob))
+                {
+                    Log.Warning("Received unexpected HarvestTimeout notification from worker {Worker} (the dispatcher has no knowledge of job {JobId}).", Sender, harvestTimeout.JobId);
+
+                    return;
+                }
+
+                _jobStore.Tell(new JobStore.UpdateJob(existingJob.Id,
+                    status: JobStatus.Failed,
+                    appendMessages: new string[] { "Timed out waiting to harvest the job results." }
+                ));
+
+                _jobs.Remove(existingJob.Id);
+                _jobWorkers.Remove(Sender);
             });
             Receive<Terminated>(terminated =>
             {
@@ -131,9 +238,34 @@ namespace AKDK.Examples.Orchestration.Actors
                     return;
                 }
 
-                // TODO: Handle termination of other actors.
+                if (terminated.ActorRef == _harvester)
+                {
+                    Log.Warning("Harvester has terminated; the Dispatcher2 cannot continue.");
 
-                // TODO: Update status and clear state for target job (if appropriate).
+                    Unhandled(terminated); // Results in DeathPactException.
+
+                    return;
+                }
+
+                Job existingJob;
+                if (_jobWorkers.TryGetValue(terminated.ActorRef, out existingJob))
+                {
+                    Log.Warning("Worker for job {JobId} ({Worker}) terminated unexpectedly; the job will be marked as failed.",
+                        existingJob.Id,
+                        terminated.ActorRef
+                    );
+
+                    _jobWorkers.Remove(terminated.ActorRef);
+                    _jobs.Remove(existingJob.Id);
+                    _jobStore.Tell(
+                        new JobStore.UpdateJob(existingJob.Id, JobStatus.Failed, appendMessages: new string[]
+                        {
+                            "The worker actor terminated unexpectedly while processing the job."
+                        })
+                    );
+
+                    return;
+                }
             });
         }
 
@@ -164,6 +296,21 @@ namespace AKDK.Examples.Orchestration.Actors
             Become(Initializing);
         }
 
+        /// <summary>
+        ///     Generate <see cref="Props"/> to create a new <see cref="Dispatcher2"/>.
+        /// </summary>
+        /// <param name="stateDirectory">
+        ///     The root state directory.
+        /// </param>
+        /// <param name="jobStore">
+        ///     A reference to the <see cref="JobStore"/> actor.
+        /// </param>
+        /// <param name="launcher">
+        ///     A reference to the <see cref="Launcher"/> actor.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="Props"/>.
+        /// </returns>
         public static Props Create(DirectoryInfo stateDirectory, IActorRef jobStore, IActorRef launcher)
         {
             if (stateDirectory == null)
