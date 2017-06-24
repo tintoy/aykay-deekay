@@ -21,16 +21,14 @@ namespace AKDK.Examples.Orchestration
         /// <summary>
         ///     Basic HOCON-style configuration for the orchestration example.
         /// </summary>
-        static readonly Config AkkaConfig = ConfigurationFactory.ParseString(
-            @"
+        static readonly Config AkkaConfig = ConfigurationFactory.ParseString(@"
                 akka {
                     loglevel = INFO
                     stdout-loglevel = INFO
                     suppress-json-serializer-warning = on
                     loggers = [ ""Akka.Event.StandardOutLogger"" ]
                 }
-            "
-        );
+        ");
 
         /// <summary>
         ///     The main program entry-point.
