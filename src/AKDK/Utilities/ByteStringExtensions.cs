@@ -63,8 +63,62 @@ namespace AKDK.Utilities
         /// </returns>
         public static string Substring(this ByteString data, int index, int count, Encoding encoding = null)
         {
-            return data.Slice(index, index + count).DecodeString(
+            return data.Slice(index, count).ToString(
                 encoding ?? Encoding.Unicode
+            );
+        }
+
+        /// <summary>
+        ///     Remove data from the start of the <see cref="ByteString"/>.
+        /// </summary>
+        /// <param name="data">
+        ///     The <see cref="ByteString"/> to trim.
+        /// </param>
+        /// <param name="count">
+        ///     The number of bytes to remove.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="ByteString"/>.
+        /// </returns>
+        public static ByteString DropLeft(this ByteString data, int count) => data.Slice(0, count);
+
+        /// <summary>
+        ///     Remove data from the end of the <see cref="ByteString"/>.
+        /// </summary>
+        /// <param name="data">
+        ///     The <see cref="ByteString"/> to trim.
+        /// </param>
+        /// <param name="count">
+        ///     The number of bytes to remove.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="ByteString"/>.
+        /// </returns>
+        public static ByteString DropRight(this ByteString data, int count) => data.Slice(data.Count - count - 1, count);
+
+        /// <summary>
+        ///     Split the <see cref="ByteString"/> at the specified index.
+        /// </summary>
+        /// <param name="data">
+        ///     The <see cref="ByteString"/> to split.
+        /// </param>
+        /// <param name="index">
+        ///     The target index.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="ValueTuple"/> containing the left and right <see cref="ByteString"/>s.
+        /// </returns>
+        public static (ByteString left, ByteString right) SplitAt(this ByteString data, int index)
+        {
+            if (index < 0)
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Index cannot be less than 0.");
+
+            if (index >= data.Count)
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Index cannot be past the end of the ByteString.");
+
+            return (
+                left: data.Slice(0, index),
+                right: data.Slice(index, data.Count - index)
             );
         }
     }

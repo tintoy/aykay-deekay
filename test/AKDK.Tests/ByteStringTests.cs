@@ -44,6 +44,8 @@ namespace AKDK.Tests
             ByteString dataBytes = ByteString.FromString(data, Encoding.Unicode);
             ByteString findBytes = ByteString.FromString(find, Encoding.Unicode);
 
+            Console.WriteLine("FUU");
+
             int actual = dataBytes.IndexOf(findBytes);
 
             Assert.Equal(expectedIndex, actual);

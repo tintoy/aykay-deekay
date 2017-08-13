@@ -2,8 +2,13 @@
 using System;
 using System.Text;
 
+// Why the hell did they mark some of the most of the useful methods on ByteString as obsolete?
+#pragma warning disable CS0618
+
 namespace AKDK.Messages
 {
+    using Utilities;
+
 	/// <summary>
 	///     The header for a line from a Docker container log.
 	/// </summary>
@@ -60,7 +65,7 @@ namespace AKDK.Messages
         /// <summary>
         ///     The log entry text.
         /// </summary>
-        public string Text => Data.DecodeString(DefaultEncoding);
+        public string Text => Data.ToString(DefaultEncoding);
 
 		/// <summary>
 		///     Read a <see cref="DockerLogEntry"/> from the specified data.

@@ -4,6 +4,9 @@ using System;
 using System.IO;
 using System.Text;
 
+// Why the hell did they mark some of the most of the useful methods on ByteString as obsolete?
+#pragma warning disable CS0618
+
 namespace AKDK.Actors.Streaming
 {
     using Messages;
@@ -99,10 +102,12 @@ namespace AKDK.Actors.Streaming
                         System.Diagnostics.Trace.Assert(lineEndingIndex == -1,
                             "Received EndOfStream with line-ending at end of buffer."
                         );
-                        
+
+                        string remainingData = buffer.ToString(encoding);
+                        System.Diagnostics.Debug.WriteLine($"StreamLines:PublishRemaining - '{remainingData}'");
                         owner.Tell(
                             new StreamLine(streamData.CorrelationId,
-                                line: buffer.DecodeString(encoding)
+                                line: remainingData
                             )
                         );
                     }
@@ -121,14 +126,16 @@ namespace AKDK.Actors.Streaming
                 if (lineEndingIndex == -1)
                     return;
 
-                var split = buffer.SplitAt(lineEndingIndex);
-                buffer = split.Item2.Drop(lineEnding.Count);
+                var (left, right) = buffer.SplitAt(lineEndingIndex);
+                buffer = right.Drop(lineEnding.Count);
 
-                ByteString lineData = split.Item1;
-                
+                ByteString lineData = left;
+                string lineText = lineData.ToString(encoding);
+                System.Diagnostics.Debug.WriteLine($"StreamLines:PublishLine - '{lineText}'");
+
                 owner.Tell(
                     new StreamLine(streamData.CorrelationId,
-                        line: lineData.DecodeString(encoding)
+                        line: lineText
                     )
                 );
             });
