@@ -1,6 +1,5 @@
 using Akka.IO;
 using System;
-using System.IO;
 using System.Text;
 using Xunit;
 
@@ -19,9 +18,10 @@ namespace AKDK.Tests
             const string data = "ABCDEFGHIJ";
             const string find = "E";
             const int expectedIndex = 8;
+            Encoding encoding = Encoding.UTF8;
 
-            ByteString dataBytes = ByteString.FromString(data, Encoding.Unicode);
-            ByteString findBytes = ByteString.FromString(find, Encoding.Unicode);
+            ByteString dataBytes = ByteString.FromString(data, encoding);
+            ByteString findBytes = ByteString.FromString(find, encoding);
 
             int actual = dataBytes.IndexOf(findBytes);
 
@@ -35,14 +35,15 @@ namespace AKDK.Tests
         ///     Find 4 bytes in 30 bytes at position 20.
         /// </summary>
         [Fact]
-        public void IndexOf_2_30_20()
+        public void IndexOf_4_30_20()
         {
             const string data = "ABCDEFGHIJHELLO";
             const string find = "HE";
             const int expectedIndex = 20;
+            Encoding encoding = Encoding.UTF8;
 
-            ByteString dataBytes = ByteString.FromString(data, Encoding.Unicode);
-            ByteString findBytes = ByteString.FromString(find, Encoding.Unicode);
+            ByteString dataBytes = ByteString.FromString(data, encoding);
+            ByteString findBytes = ByteString.FromString(find, encoding);
 
             Console.WriteLine("FUU");
 

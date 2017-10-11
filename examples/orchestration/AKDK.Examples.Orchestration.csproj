@@ -3,12 +3,12 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp1.1</TargetFramework>
-	<AssemblyName>OrchestrationExample</AssemblyName>
+	  <AssemblyName>OrchestrationExample</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka" Version="1.3.0" />
-    <PackageReference Include="Akka.Cluster" Version="1.3.0" />
+    <PackageReference Include="Akka" Version="1.3.1" />
+    <PackageReference Include="Akka.Cluster" Version="1.3.1" />
     <PackageReference Include="Docker.DotNet" Version="2.124.3" />
 	  <PackageReference Include="System.ValueTuple" Version="4.3.0" />
   </ItemGroup>

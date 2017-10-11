@@ -2,6 +2,9 @@ using Akka.IO;
 using System;
 using System.Text;
 
+// Why the hell did they mark some of the most of the useful methods on ByteString as obsolete?
+#pragma warning disable CS0618
+
 namespace AKDK.Utilities
 {
     /// <summary>
@@ -56,7 +59,7 @@ namespace AKDK.Utilities
         ///		The number of bytes to extract.
         /// </param>
         /// <param name="encoding">
-        ///		Optional <see cref="Encoding"/> to use (defaults to <see cref="Encoding.Unicode"/>).
+        ///		Optional <see cref="Encoding"/> to use (defaults to <see cref="Encoding.UTF8"/>).
         /// </param>
         /// <returns>
         ///		The sub-string.
@@ -64,7 +67,7 @@ namespace AKDK.Utilities
         public static string Substring(this ByteString data, int index, int count, Encoding encoding = null)
         {
             return data.Slice(index, count).ToString(
-                encoding ?? Encoding.Unicode
+                encoding ?? Encoding.UTF8
             );
         }
 
@@ -108,18 +111,9 @@ namespace AKDK.Utilities
         /// <returns>
         ///     A <see cref="ValueTuple"/> containing the left and right <see cref="ByteString"/>s.
         /// </returns>
-        public static (ByteString left, ByteString right) SplitAt(this ByteString data, int index)
-        {
-            if (index < 0)
-                throw new ArgumentOutOfRangeException(nameof(index), index, "Index cannot be less than 0.");
-
-            if (index >= data.Count)
-                throw new ArgumentOutOfRangeException(nameof(index), index, "Index cannot be past the end of the ByteString.");
-
-            return (
-                left: data.Slice(0, index),
-                right: data.Slice(index, data.Count - index)
-            );
-        }
+        public static (ByteString left, ByteString right) SplitAt(this ByteString data, int index) => (
+            left: data.Take(index),
+            right: data.Drop(index)
+        );
     }
 }

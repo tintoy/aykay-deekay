@@ -29,11 +29,12 @@ namespace AKDK.Tests
         public void MemoryStream_Lines_2_BufferSize_3()
         {
             const int bufferSize = 3;
+            Encoding encoding = Encoding.UTF8;
 
             TestProbe owner = CreateTestProbe(name: "owner");
-            MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ");
+            MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ", encoding);
             IActorRef streamLines = ActorOf(
-                StreamLines.Create("lines-2-buffer-size-3", owner, stream, Encoding.Unicode, bufferSize)
+                StreamLines.Create("lines-2-buffer-size-3", owner, stream, encoding, bufferSize)
             );
 
             Within(TimeSpan.FromSeconds(5), () =>
@@ -55,11 +56,12 @@ namespace AKDK.Tests
         public void MemoryStream_Lines_2_Trailing_NewLine_BufferSize_3()
         {
             const int bufferSize = 3;
+            Encoding encoding = Encoding.UTF8;
 
             TestProbe owner = CreateTestProbe(name: "owner");
-            MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ\n");
+            MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ\n", encoding);
             IActorRef streamLines = ActorOf(
-                StreamLines.Create("lines-2-buffer-size-3", owner, stream, Encoding.Unicode, bufferSize)
+                StreamLines.Create("lines-2-buffer-size-3", owner, stream, encoding, bufferSize)
             );
 
             Within(TimeSpan.FromSeconds(5), () =>
@@ -81,11 +83,12 @@ namespace AKDK.Tests
         public void MemoryStream_JustNewLines_3_BufferSize_2()
         {
             const int bufferSize = 2;
+            Encoding encoding = Encoding.UTF8;
 
             TestProbe owner = CreateTestProbe(name: "owner");
-            MemoryStream stream = CreateMemoryStream("\n\n\n");
+            MemoryStream stream = CreateMemoryStream("\n\n\n", encoding);
             IActorRef streamLines = ActorOf(
-                StreamLines.Create("just-new-lines-3-buffer-size-2", owner, stream, Encoding.Unicode, bufferSize),
+                StreamLines.Create("just-new-lines-3-buffer-size-2", owner, stream, encoding, bufferSize),
                 name: "stream-lines"
             );
 
@@ -108,10 +111,10 @@ namespace AKDK.Tests
             });
         }
 
-        MemoryStream CreateMemoryStream(string content)
+        MemoryStream CreateMemoryStream(string content, Encoding encoding)
         {
             return new MemoryStream(
-                Encoding.Unicode.GetBytes(content)
+                encoding.GetBytes(content)
             );
         }
     }

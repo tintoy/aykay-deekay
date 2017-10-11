@@ -158,7 +158,7 @@ namespace AKDK.Actors.Streaming
                 return EndOfStream;
 
             return new StreamData(_correlationId,
-                ByteString.FromBytes(_buffer, 0, bytesRead)
+                data: ByteString.CopyFrom(_buffer, 0, bytesRead)
             );
         }
 

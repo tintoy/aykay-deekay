@@ -90,54 +90,42 @@ namespace AKDK.Actors.Streaming
 
             Receive<ReadStream.StreamData>(streamData =>
             {
-                int lineEndingIndex;
                 isEndOfStream = streamData.IsEndOfStream;
-                if (isEndOfStream)
-                {
-                    // If we still have data remaining, publish it as the final line.
-                    if (buffer.Count > 0)
-                    {
-                        // There shouldn't be a line-ending here, since it would have been caught the last time we received stream data.
-                        lineEndingIndex = buffer.IndexOf(lineEnding);
-                        System.Diagnostics.Trace.Assert(lineEndingIndex == -1,
-                            "Received EndOfStream with line-ending at end of buffer."
-                        );
+                buffer += streamData.Data;
 
-                        string remainingData = buffer.ToString(encoding);
-                        System.Diagnostics.Debug.WriteLine($"StreamLines:PublishRemaining - '{remainingData}'");
-                        owner.Tell(
-                            new StreamLine(streamData.CorrelationId,
-                                line: remainingData
-                            )
-                        );
+                while (buffer.Count > 0)
+                {
+                    int lineEndingIndex = buffer.IndexOf(lineEnding);
+                    if (lineEndingIndex == -1)
+                    {
+                        if (isEndOfStream)
+                            lineEndingIndex = buffer.Count; // Publish whatever we have left.
+                        else
+                            break; // Wait for the rest of the current line to arrive.
                     }
 
+                    var (left, right) = buffer.SplitAt(lineEndingIndex);
+                    buffer = right.Drop(lineEnding.Count);
+
+                    ByteString lineData = left;
+                    string lineText = lineData.ToString(encoding);
+                    System.Diagnostics.Debug.WriteLine($"StreamLines:PublishLine - '{lineText}'");
+
+                    owner.Tell(
+                        new StreamLine(streamData.CorrelationId,
+                            line: lineText
+                        )
+                    );
+                }
+
+                if (isEndOfStream)
+                {
                     owner.Tell(
                         new EndOfStream(correlationId)
                     );
+
                     Context.Stop(Self);
-
-                    return;
                 }
-
-                buffer += streamData.Data;
-
-                lineEndingIndex = buffer.IndexOf(lineEnding);
-                if (lineEndingIndex == -1)
-                    return;
-
-                var (left, right) = buffer.SplitAt(lineEndingIndex);
-                buffer = right.Drop(lineEnding.Count);
-
-                ByteString lineData = left;
-                string lineText = lineData.ToString(encoding);
-                System.Diagnostics.Debug.WriteLine($"StreamLines:PublishLine - '{lineText}'");
-
-                owner.Tell(
-                    new StreamLine(streamData.CorrelationId,
-                        line: lineText
-                    )
-                );
             });
             Receive<ReadStream.StreamError>(error =>
             {
@@ -200,7 +188,7 @@ namespace AKDK.Actors.Streaming
         public static Props Create(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize = ReadStream.DefaultBufferSize, bool windowsLineEndings = false)
         {
             if (encoding == null)
-                encoding = Encoding.Unicode;
+                encoding = Encoding.UTF8;
 
             return Props.Create(
                 () => new StreamLines(correlationId, owner, stream, encoding, bufferSize, windowsLineEndings)

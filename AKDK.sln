@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.6
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A1F96380-2DC6-47CD-856C-A38DE022B12C}"
 	ProjectSection(SolutionItems) = preProject
@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{202625
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AKDK.TestHarness", "test\AKDK.TestHarness\AKDK.TestHarness.csproj", "{8756D044-2431-4C78-B1AF-E4AB82F45DF7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AKDK.TestHarness", "test\AKDK.TestHarness\AKDK.TestHarness.csproj", "{8756D044-2431-4C78-B1AF-E4AB82F45DF7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{05BD88BC-1C30-4685-839D-0DB01B27B4E5}"
 	ProjectSection(SolutionItems) = preProject
@@ -104,5 +104,8 @@ Global
 		{31A7509A-61BB-4D28-A489-C62DAEAE5C38} = {05BD88BC-1C30-4685-839D-0DB01B27B4E5}
 		{7AD87F51-CB68-4477-9411-0B34E6893C11} = {05BD88BC-1C30-4685-839D-0DB01B27B4E5}
 		{444E1A3E-AD33-48F2-BA09-EACCAC02DF9B} = {7AD87F51-CB68-4477-9411-0B34E6893C11}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0A74D434-220A-497D-AD46-2BF861CEC2EF}
 	EndGlobalSection
 EndGlobal
