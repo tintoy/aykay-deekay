@@ -107,7 +107,7 @@ namespace AKDK.Actors.Streaming
                     var (left, right) = buffer.SplitAt(lineEndingIndex);
                     buffer = right.Drop(lineEnding.Count);
 
-                    ByteString lineData = left;
+                    ByteString lineData = left.Compact(); // If we don't compact the ByteString before decoding, then it feeds chunks to the encoder that are invalid for Encoding.Unicode.
                     string lineText = lineData.ToString(encoding);
                     System.Diagnostics.Debug.WriteLine($"StreamLines:PublishLine - '{lineText}'");
 
@@ -188,7 +188,7 @@ namespace AKDK.Actors.Streaming
         public static Props Create(string correlationId, IActorRef owner, Stream stream, Encoding encoding, int bufferSize = ReadStream.DefaultBufferSize, bool windowsLineEndings = false)
         {
             if (encoding == null)
-                encoding = Encoding.UTF8;
+                encoding = Encoding.Unicode;
 
             return Props.Create(
                 () => new StreamLines(correlationId, owner, stream, encoding, bufferSize, windowsLineEndings)

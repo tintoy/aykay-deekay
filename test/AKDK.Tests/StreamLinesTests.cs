@@ -29,7 +29,7 @@ namespace AKDK.Tests
         public void MemoryStream_Lines_2_BufferSize_3()
         {
             const int bufferSize = 3;
-            Encoding encoding = Encoding.UTF8;
+            Encoding encoding = Encoding.Unicode;
 
             TestProbe owner = CreateTestProbe(name: "owner");
             MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ", encoding);
@@ -56,7 +56,7 @@ namespace AKDK.Tests
         public void MemoryStream_Lines_2_Trailing_NewLine_BufferSize_3()
         {
             const int bufferSize = 3;
-            Encoding encoding = Encoding.UTF8;
+            Encoding encoding = Encoding.Unicode;
 
             TestProbe owner = CreateTestProbe(name: "owner");
             MemoryStream stream = CreateMemoryStream("ABCDE\nFGHIJ\n", encoding);
@@ -83,7 +83,7 @@ namespace AKDK.Tests
         public void MemoryStream_JustNewLines_3_BufferSize_2()
         {
             const int bufferSize = 2;
-            Encoding encoding = Encoding.UTF8;
+            Encoding encoding = Encoding.Unicode;
 
             TestProbe owner = CreateTestProbe(name: "owner");
             MemoryStream stream = CreateMemoryStream("\n\n\n", encoding);

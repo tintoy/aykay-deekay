@@ -18,7 +18,7 @@ namespace AKDK.Tests
             const string data = "ABCDEFGHIJ";
             const string find = "E";
             const int expectedIndex = 8;
-            Encoding encoding = Encoding.UTF8;
+            Encoding encoding = Encoding.Unicode;
 
             ByteString dataBytes = ByteString.FromString(data, encoding);
             ByteString findBytes = ByteString.FromString(find, encoding);
@@ -27,7 +27,7 @@ namespace AKDK.Tests
 
             Assert.Equal(expectedIndex, actual);
             Assert.Equal(find,
-                dataBytes.Substring(expectedIndex, findBytes.Count)
+                dataBytes.Substring(expectedIndex, findBytes.Count, encoding)
             );
         }
 
@@ -40,7 +40,7 @@ namespace AKDK.Tests
             const string data = "ABCDEFGHIJHELLO";
             const string find = "HE";
             const int expectedIndex = 20;
-            Encoding encoding = Encoding.UTF8;
+            Encoding encoding = Encoding.Unicode;
 
             ByteString dataBytes = ByteString.FromString(data, encoding);
             ByteString findBytes = ByteString.FromString(find, encoding);
@@ -51,7 +51,7 @@ namespace AKDK.Tests
 
             Assert.Equal(expectedIndex, actual);
             Assert.Equal(find,
-                dataBytes.Substring(expectedIndex, findBytes.Count)
+                dataBytes.Substring(expectedIndex, findBytes.Count, encoding)
             );
         }
     }

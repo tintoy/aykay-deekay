@@ -59,7 +59,7 @@ namespace AKDK.Utilities
         ///		The number of bytes to extract.
         /// </param>
         /// <param name="encoding">
-        ///		Optional <see cref="Encoding"/> to use (defaults to <see cref="Encoding.UTF8"/>).
+        ///		Optional <see cref="Encoding"/> to use (defaults to <see cref="Encoding.Unicode"/>).
         /// </param>
         /// <returns>
         ///		The sub-string.
@@ -67,7 +67,7 @@ namespace AKDK.Utilities
         public static string Substring(this ByteString data, int index, int count, Encoding encoding = null)
         {
             return data.Slice(index, count).ToString(
-                encoding ?? Encoding.UTF8
+                encoding ?? Encoding.Unicode
             );
         }
 
