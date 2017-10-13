@@ -1,8 +1,13 @@
+using Akka;
 using Akka.Actor;
 using Akka.IO;
+using Akka.Streams;
+using Akka.Streams.Dsl;
+using Akka.Streams.IO;
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 // Why the hell did they mark some of the most of the useful methods on ByteString as obsolete?
 #pragma warning disable CS0618
@@ -37,14 +42,24 @@ namespace AKDK.Actors.Streaming
         static readonly string UnixNewLine = "\n";
 
         /// <summary>
-        ///		<see cref="Props"/> used to create the <see cref="ReadStream"/> actor for reading from the underlying stream.
+        ///     The source used to stream data from the underlying <see cref="Stream"/>.
         /// </summary>
-        Props               _readStreamProps;
+        readonly Source<ByteString, Task<IOResult>>     _streamSource;
 
         /// <summary>
-        ///		The <see cref="ReadStream"/> actor used to read from the underlying stream.
+        ///     The <see cref="Flow{TIn, TOut, TMat}"/> used to process each line of data.
         /// </summary>
-        IActorRef           _readStream;
+        readonly Flow<ByteString, StreamLine, NotUsed>  _lineProcessor;
+
+        /// <summary>
+        ///     A sink used to send <see cref="StreamLine"/>s to the owning actor.
+        /// </summary>
+        readonly Sink<StreamLine, NotUsed>              _ownerSink;
+
+        /// <summary>
+        ///     The processing graph used to stream lines to the owner actor.
+        /// </summary>
+        readonly IRunnableGraph<Task<IOResult>>         _lineStreamer;
 
         /// <summary>
         ///		Create a new <see cref="StreamLines"/> actor.
@@ -82,72 +97,33 @@ namespace AKDK.Actors.Streaming
             if (encoding == null)
                 throw new ArgumentNullException(nameof(encoding));
 
-            _readStreamProps = ReadStream.Create(correlationId, Self, stream, bufferSize);
+            // AF: This (experimental) code works, but is incomplete. Doesn't handle errors, cancellation, or cleaning up the actor once the graph's work is complete.
 
-            ByteString lineEnding = ByteString.FromString(windowsLineEndings ? WindowsNewLine : UnixNewLine, encoding);
-            ByteString buffer = ByteString.Empty;
-            bool isEndOfStream = false;
+            _streamSource = StreamConverters.FromInputStream(
+                createInputStream: () => stream,
+                chunkSize: 3
+            );
 
-            Receive<ReadStream.StreamData>(streamData =>
+            _lineProcessor =
+                Framing.Delimiter(
+                    delimiter: ByteString.FromString(windowsLineEndings ? WindowsNewLine : UnixNewLine, encoding),
+                    maximumFrameLength: 1024 * 1024,
+                    allowTruncation: true
+                )
+                .Select(line =>
+                    new StreamLine(correlationId, line.Compact().ToString(encoding))
+                );
+
+            _ownerSink = Sink.ActorRef<StreamLine>(owner,
+                onCompleteMessage: new EndOfStream(correlationId)
+            );
+
+            _lineStreamer = _streamSource.Via(_lineProcessor).To(_ownerSink);
+
+            Receive<IOResult>(result =>
             {
-                isEndOfStream = streamData.IsEndOfStream;
-                buffer += streamData.Data;
-
-                while (buffer.Count > 0)
-                {
-                    int lineEndingIndex = buffer.IndexOf(lineEnding);
-                    if (lineEndingIndex == -1)
-                    {
-                        if (isEndOfStream)
-                            lineEndingIndex = buffer.Count; // Publish whatever we have left.
-                        else
-                            break; // Wait for the rest of the current line to arrive.
-                    }
-
-                    var (left, right) = buffer.SplitAt(lineEndingIndex);
-                    buffer = right.Drop(lineEnding.Count);
-
-                    ByteString lineData = left.Compact(); // If we don't compact the ByteString before decoding, then it feeds chunks to the encoder that are invalid for Encoding.Unicode.
-                    string lineText = lineData.ToString(encoding);
-                    System.Diagnostics.Debug.WriteLine($"StreamLines:PublishLine - '{lineText}'");
-
-                    owner.Tell(
-                        new StreamLine(streamData.CorrelationId,
-                            line: lineText
-                        )
-                    );
-                }
-
-                if (isEndOfStream)
-                {
-                    owner.Tell(
-                        new EndOfStream(correlationId)
-                    );
-
-                    Context.Stop(Self);
-                }
-            });
-            Receive<ReadStream.StreamError>(error =>
-            {
-                owner.Tell(error);
-            });
-            Receive<ReadStream.Close>(close =>
-            {
-                _readStream.Forward(close);
-            });
-            Receive<Terminated>(terminated =>
-            {
-                if (terminated.ActorRef == _readStream)
-                {
-                    if (!isEndOfStream)
-                    {
-                        owner.Tell(
-                            new EndOfStream(correlationId)
-                        );
-                    }
-                }
-                else
-                    Unhandled(terminated);
+                if (!result.WasSuccessful)
+                    Log.Error(result.Error, "Error while reading from stream.");
             });
         }
 
@@ -158,10 +134,7 @@ namespace AKDK.Actors.Streaming
         {
             base.PreStart();
 
-            _readStream = Context.ActorOf(_readStreamProps, "read-stream");
-
-            // Raise end-of-stream if source actor dies.
-            Context.Watch(_readStream);
+            _lineStreamer.Run(Context.System.Materializer()).PipeTo(Self);
         }
 
         /// <summary>
