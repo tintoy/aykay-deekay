@@ -1,4 +1,3 @@
-using Akka;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams;
@@ -15,7 +14,6 @@ using System.Threading.Tasks;
 namespace AKDK.Actors.Streaming
 {
     using Messages;
-    using Utilities;
 
     /// <summary>
     ///		Actor that reads lines from a stream.
@@ -42,24 +40,9 @@ namespace AKDK.Actors.Streaming
         static readonly string UnixNewLine = "\n";
 
         /// <summary>
-        ///     The source used to stream data from the underlying <see cref="Stream"/>.
-        /// </summary>
-        readonly Source<ByteString, Task<IOResult>>     _streamSource;
-
-        /// <summary>
-        ///     The <see cref="Flow{TIn, TOut, TMat}"/> used to process each line of data.
-        /// </summary>
-        readonly Flow<ByteString, StreamLine, NotUsed>  _lineProcessor;
-
-        /// <summary>
-        ///     A sink used to send <see cref="StreamLine"/>s to the owning actor.
-        /// </summary>
-        readonly Sink<StreamLine, NotUsed>              _ownerSink;
-
-        /// <summary>
         ///     The processing graph used to stream lines to the owner actor.
         /// </summary>
-        readonly IRunnableGraph<Task<IOResult>>         _lineStreamer;
+        readonly IRunnableGraph<Task<IOResult>> _lineStreamer;
 
         /// <summary>
         ///		Create a new <see cref="StreamLines"/> actor.
@@ -97,33 +80,54 @@ namespace AKDK.Actors.Streaming
             if (encoding == null)
                 throw new ArgumentNullException(nameof(encoding));
 
-            // AF: This (experimental) code works, but is incomplete. Doesn't handle errors, cancellation, or cleaning up the actor once the graph's work is complete.
-
-            _streamSource = StreamConverters.FromInputStream(
-                createInputStream: () => stream,
-                chunkSize: 3
-            );
-
-            _lineProcessor =
-                Framing.Delimiter(
-                    delimiter: ByteString.FromString(windowsLineEndings ? WindowsNewLine : UnixNewLine, encoding),
-                    maximumFrameLength: 1024 * 1024,
-                    allowTruncation: true
+            _lineStreamer =
+                StreamConverters.FromInputStream(
+                    createInputStream: () => stream,
+                    chunkSize: 3
                 )
-                .Select(line =>
-                    new StreamLine(correlationId, line.Compact().ToString(encoding))
+                .Via(
+                    Framing.Delimiter(
+                        delimiter: ByteString.FromString(windowsLineEndings ? WindowsNewLine : UnixNewLine, encoding),
+                        maximumFrameLength: 1024 * 1024,
+                        allowTruncation: true
+                    )
+                    .Select(line =>
+                        new StreamLine(correlationId, line.Compact().ToString(encoding))
+                    )
+                )
+                .To(
+                    Sink.ActorRef<StreamLine>(Self,
+                        onCompleteMessage: new EndOfStream(correlationId)
+                    )
                 );
 
-            _ownerSink = Sink.ActorRef<StreamLine>(owner,
-                onCompleteMessage: new EndOfStream(correlationId)
-            );
+            // Messages from the line-streamer pipeline.
+            Receive<Status.Failure>(failure =>
+            {
+                using (stream)
+                {
+                    owner.Tell(failure);
 
-            _lineStreamer = _streamSource.Via(_lineProcessor).To(_ownerSink);
+                    Context.Stop(Self);
+                }
+            });
+            Receive<StreamLine>(streamLine =>
+            {
+                owner.Tell(streamLine);
+            });
+            Receive<EndOfStream>(endOfStream =>
+            {
+                using (stream)
+                {
+                    owner.Tell(endOfStream);
 
+                    Context.Stop(Self);
+                }
+            });
             Receive<IOResult>(result =>
             {
                 if (!result.WasSuccessful)
-                    Log.Error(result.Error, "Error while reading from stream.");
+                    Log.Error(result.Error, "Error while reading from the underlying stream.");
             });
         }
 
@@ -134,6 +138,7 @@ namespace AKDK.Actors.Streaming
         {
             base.PreStart();
 
+            // Start the pipeline.
             _lineStreamer.Run(Context.System.Materializer()).PipeTo(Self);
         }
 
