@@ -2,7 +2,6 @@ using Akka.Actor;
 using Akka.IO;
 using System;
 using System.IO;
-using System.Text;
 
 namespace AKDK.Actors
 {
@@ -18,12 +17,12 @@ namespace AKDK.Actors
         /// <summary>
         ///		<see cref="Props"/> used to create the <see cref="ReadStream"/> actor for reading from the underlying stream.
         /// </summary>
-        Props               _readStreamProps;
+        Props _readStreamProps;
 
         /// <summary>
         ///		The <see cref="ReadStream"/> actor used to read from the underlying stream.
         /// </summary>
-        IActorRef           _readStream;
+        IActorRef _readStream;
 
         /// <summary>
         ///		Create a new <see cref="LogParser"/> actor.
